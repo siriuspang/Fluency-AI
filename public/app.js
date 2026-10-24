@@ -1994,6 +1994,97 @@ async function callZeroKeyBackendChatAPI(userMessage) {
   return data;
 }
 
+/**
+ * Direct client-side Zero-Key LLM fallback (runs on Cloudflare Pages / mobile where /api/chat is not hosted)
+ * Powers full conversational AI responses without any backend Node server or API key!
+ */
+async function callZeroKeyClientLLM(userMessage) {
+  const scenario = SCENARIOS[state.scenario] || SCENARIOS.casual;
+  const { voiceDisplayName } = getParsedVoicePersona();
+  const histText = (state.currentMessages || [])
+    .slice(-8)
+    .map((m) => `${m.role === "user" ? "User" : voiceDisplayName}: ${m.text}`)
+    .join("\n");
+
+  const prompt = `DO NOT call any tools or read any files. Respond ONLY with a single raw JSON object (no markdown fences).
+You are ${voiceDisplayName}, a warm, empathetic, intelligent live English conversation partner in the "${scenario.title}" scenario (${getDynamicRolePrompt(state.scenario)}).
+
+Recent conversation history:
+${histText || "(Start of conversation)"}
+
+User's new message:
+"${userMessage}"
+
+Instructions:
+1. "reply" (MUST BE THE FIRST KEY): Respond naturally and empathetically directly addressing the exact meaning, story, and emotion of the user's message in 2-3 natural sentences. End with 1 specific, natural follow-up question that continues the story. NEVER ask generic template questions. NEVER repeat questions. NEVER mention AI model names.
+2. "follow_up_hint": 1 natural first-person English sentence that the user could say next to answer your question.
+3. "is_grammar_perfect": true only if the user's sentence has zero grammar, spelling, preposition, or word-choice issues; otherwise false.
+4. "direct_fix": Fix ONLY the grammar, spelling, verb form, or preposition errors in the user's exact sentence while preserving their original words and structure as closely as possible. If already grammatically valid, keep the user's exact sentence.
+5. "casual_native": A casual, natural native speaker way to express the user's exact thought.
+6. "fluent_polite": A fluent, expressive native way to express the user's exact thought.
+7. "grammar_explanation": Concise 1-2 sentence explanation of the grammar fixes made in "direct_fix" (or why it is already grammatically accurate).
+8. "pronunciation_tips": Array of 2 concise objects [{"word":"word (phonetic)","tip":"..."}].
+9. "key_vocabulary": Array of 2 concise objects [{"word":"phrase","meaning":"..."}].`;
+
+  const resp = await fetch("https://text.pollinations.ai/openai", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "openai-fast",
+      temperature: 0.65,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+  if (!resp.ok) throw new Error("Zero-key LLM status " + resp.status);
+  const data = await resp.json();
+  const rawStr = data.choices?.[0]?.message?.content || "";
+  const cleaned = rawStr.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start === -1 || end === -1 || end <= start) throw new Error("Invalid JSON from zero-key LLM");
+  const parsed = JSON.parse(cleaned.slice(start, end + 1));
+  if (!parsed || !parsed.reply) throw new Error("Missing reply from zero-key LLM");
+
+  const directFix = (parsed.direct_fix || userMessage).trim();
+  const casualNative = (parsed.casual_native || directFix).trim();
+  const fluentPolite = (parsed.fluent_polite || directFix).trim();
+  const hasDiff = directFix.toLowerCase().replace(/[^\w\s]/g, "") !== userMessage.toLowerCase().replace(/[^\w\s]/g, "");
+
+  return {
+    reply: (parsed.reply || "").trim(),
+    follow_up_hint: parsed.follow_up_hint || "That makes sense! Let me tell you a little more.",
+    is_grammar_perfect: hasDiff ? false : (typeof parsed.is_grammar_perfect === "boolean" ? parsed.is_grammar_perfect : true),
+    corrected_sentence: directFix,
+    corrected_variants: [
+      { label: "Grammar Fix", sentence: directFix },
+      { label: "Alternative 1 · Casual Native", sentence: casualNative },
+      { label: "Alternative 2 · Fluent & Expressive", sentence: fluentPolite }
+    ],
+    grammar_explanation: parsed.grammar_explanation || "Grammar and phrasing look good!",
+    better_expressions:
+      Array.isArray(parsed.better_expressions) && parsed.better_expressions.length > 0
+        ? parsed.better_expressions
+        : [
+            { tone: "Casual Native", phrase: casualNative },
+            { tone: "Fluent & Expressive", phrase: fluentPolite }
+          ],
+    pronunciation_tips:
+      Array.isArray(parsed.pronunciation_tips) && parsed.pronunciation_tips.length > 0
+        ? parsed.pronunciation_tips
+        : [
+            { word: "Connected Speech", tip: "Link consonant endings smoothly into the next vowel sound." },
+            { word: "Sentence Stress", tip: "Emphasize key nouns and action verbs." }
+          ],
+    key_vocabulary:
+      Array.isArray(parsed.key_vocabulary) && parsed.key_vocabulary.length > 0
+        ? parsed.key_vocabulary
+        : [
+            { word: "express yourself", meaning: "To communicate your thoughts clearly." }
+          ],
+    scores: calculateRealisticScores(userMessage, !hasDiff && parsed.is_grammar_perfect, directFix, state.learnerLevel)
+  };
+}
+
 // ==================== SEND MESSAGE FLOW ====================
 async function handleSendUserMessage(overrideText = null) {
     const text = (overrideText !== null ? overrideText : dom.userInput.value).trim();
@@ -2023,8 +2114,13 @@ async function handleSendUserMessage(overrideText = null) {
       try {
         result = await callZeroKeyBackendChatAPI(text);
       } catch (proxyErr) {
-        console.warn("Zero-key live AI proxy notice, using context-aware local engine:", proxyErr);
-        result = generateLocalDemoCoaching(text);
+        try {
+          console.info("Directly connecting to Zero-Key Real LLM conversation engine...");
+          result = await callZeroKeyClientLLM(text);
+        } catch (clientLlmErr) {
+          console.warn("Zero-key LLM failover notice, using contextual local engine:", clientLlmErr);
+          result = generateLocalDemoCoaching(text);
+        }
       }
     }
 

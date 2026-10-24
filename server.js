@@ -2024,10 +2024,43 @@ Instructions:
         }
       });
 
-      // Await full turn completion (~2.5-3.5s) to guarantee accurate LLM grammar correction
-      const fullRes = await workerState.busyPromise;
-      if (fullRes && fullRes.reply) {
-        if (voicePersona) {
+      // Race between early streaming reply (~1.8s) and full turn completion
+      const winner = await Promise.race([
+        earlyTurnPromise,
+        workerState.busyPromise.then((fullRes) => ({ early: false, fullRes }))
+      ]);
+
+      if (winner && winner.early && winner.reply) {
+        const directFix = localGrammar.corrected;
+        const casualNative = localGrammar.correctedVariants?.[1]?.sentence || directFix;
+        const fluentPolite = localGrammar.correctedVariants?.[2]?.sentence || directFix;
+        return {
+          reply: winner.reply,
+          follow_up_hint: winner.follow_up_hint || "That makes sense! Let me share a bit more.",
+          pending_coach_id: winner.turnId,
+          is_grammar_perfect: localGrammar.isPerfect,
+          corrected_sentence: directFix,
+          corrected_variants: localGrammar.correctedVariants,
+          grammar_explanation: localGrammar.explanation,
+          better_expressions: [
+            { tone: "Casual Native", phrase: casualNative },
+            { tone: "Fluent & Expressive", phrase: fluentPolite }
+          ],
+          pronunciation_tips: [
+            { word: "Connected Speech", tip: "Link consonant endings smoothly into the next vowel sound." },
+            { word: "Sentence Stress", tip: "Emphasize key nouns, main verbs, and emotional adjectives." }
+          ],
+          key_vocabulary: [
+            { word: "express yourself", meaning: "To communicate your thoughts and feelings clearly." },
+            { word: "build confidence", meaning: "To feel more sure and comfortable when speaking." }
+          ],
+          recommended_speech_rate: null
+        };
+      }
+
+      if (winner && !winner.early && winner.fullRes) {
+        const fullRes = winner.fullRes;
+        if (fullRes.reply && voicePersona) {
           prewarmTtsMatchingClientSplit(
             fullRes.reply,
             voicePersona,
@@ -2159,38 +2192,31 @@ async function buildCoachingResponse(
 
   const grammarResult = analyzeGrammarAndPhrasing(userMessage, modelMeta);
 
-  // Instant fast-path ONLY for short 1-6 word self-intro or pure "hi/hello" greetings
-  const isShortSelfIntro =
-    wordLen <= 6 && /^(hi|hello|hey)?[,.\s]*(there)?[,.\s]*(who are you|what is your name|what's your name)[.!?]*$/i.test(lower);
-  const isPureGreeting =
-    wordLen <= 3 && /^(hi|hello|hey|good morning|good afternoon|good evening|hi there|hello there)[.!?]*$/i.test(lower);
-
-  if (!isShortSelfIntro && !isPureGreeting) {
-    const llmResult = await callRealCoachLLM(
+  // Prioritize Real Coach LLM for all dialogue turns (including greetings and self-intros) to guarantee natural, empathetic AI conversation
+  const llmResult = await callRealCoachLLM(
+    userMessage,
+    modelId,
+    scenarioTitle,
+    rolePrompt,
+    partnerName,
+    voicePersona,
+    history,
+    grammarResult,
+    levelKey,
+    speechRate
+  );
+  if (llmResult) {
+    const realisticScores = calculateRealisticScores(
       userMessage,
-      modelId,
-      scenarioTitle,
-      rolePrompt,
-      partnerName,
-      voicePersona,
-      history,
-      grammarResult,
-      levelKey,
-      speechRate
+      llmResult.is_grammar_perfect,
+      llmResult.corrected_sentence,
+      levelKey
     );
-    if (llmResult) {
-      const realisticScores = calculateRealisticScores(
-        userMessage,
-        llmResult.is_grammar_perfect,
-        llmResult.corrected_sentence,
-        levelKey
-      );
-      return {
-        ...llmResult,
-        learner_level: levelKey,
-        scores: realisticScores
-      };
-    }
+    return {
+      ...llmResult,
+      learner_level: levelKey,
+      scores: realisticScores
+    };
   }
 
   const convResult = generateContextualReply(
