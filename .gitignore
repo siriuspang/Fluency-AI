@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment and sensitive keys
+.env
+.env.*
+*.local
+
+# Logs and system artifacts
+*.log
+.DS_Store
+Thumbs.db
+screenshot*.png
+.system_generated/

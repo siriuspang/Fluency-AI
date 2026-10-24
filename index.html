@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fluency AI — Real-Time English Speaking & Fluency Coach</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=10" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Left Sidebar: Scenarios, Progress, History & Settings -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+        </div>
+        <div>
+          <h1>Fluency AI</h1>
+        </div>
+      </div>
+
+      <!-- History & Review Book Quick Access -->
+      <div class="sidebar-section">
+        <button class="btn-history-hub" id="openHistoryBtn">
+          <div class="history-hub-left">
+            <span class="history-hub-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+            </span>
+            <strong>History & Review</strong>
+          </div>
+        </button>
+      </div>
+
+      <!-- Scenario Selection (통일된 미니멀 모노크롬 SVG 아이콘) -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span>ROLEPLAY SCENARIOS</span>
+        </div>
+        <div class="scenario-list" id="scenarioList">
+          <button class="scenario-btn active" data-scenario="casual">
+            <span class="scenario-emoji">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <span class="scenario-name">Casual Daily Talk</span>
+          </button>
+          <button class="scenario-btn" data-scenario="interview">
+            <span class="scenario-emoji">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </span>
+            <span class="scenario-name">Job Interview</span>
+          </button>
+          <button class="scenario-btn" data-scenario="business">
+            <span class="scenario-emoji">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </span>
+            <span class="scenario-name">Business Meeting</span>
+          </button>
+          <button class="scenario-btn" data-scenario="travel">
+            <span class="scenario-emoji">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            </span>
+            <span class="scenario-name">Travel & Concierge</span>
+          </button>
+          <button class="scenario-btn" data-scenario="shadowing">
+            <span class="scenario-emoji">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+            </span>
+            <span class="scenario-name">Pronunciation & Shadowing</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Session Stats / Live Scores -->
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span>SPEAKING METRICS</span>
+          <span class="cefr-pill hidden" id="cefrBadge"></span>
+        </div>
+        <div class="metrics-card">
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>Fluency & Flow</span>
+              <strong id="fluencyScore">86%</strong>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fluency" id="fluencyBar" style="width: 86%"></div></div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>Grammar Accuracy</span>
+              <strong id="grammarScore">88%</strong>
+            </div>
+            <div class="progress-bar"><div class="progress-fill grammar" id="grammarBar" style="width: 88%"></div></div>
+          </div>
+          <div class="metric-row">
+            <div class="metric-label">
+              <span>Vocabulary Richness</span>
+              <strong id="vocabScore">82%</strong>
+            </div>
+            <div class="progress-bar"><div class="progress-fill vocab" id="vocabBar" style="width: 82%"></div></div>
+          </div>
+          <div class="session-counters">
+            <div class="counter-box">
+              <span class="counter-num" id="turnCount">1</span>
+              <span class="counter-label">Turns</span>
+            </div>
+            <div class="counter-box">
+              <span class="counter-num" id="wordCount">0</span>
+              <span class="counter-label">Words Spoken</span>
+            </div>
+            <div class="counter-box">
+              <span class="counter-num" id="savedPhrasesCount">0</span>
+              <span class="counter-label">Saved Items</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings -->
+      <div class="sidebar-footer">
+        <button class="btn-settings" id="openSettingsBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span>Voice Speed & Settings</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Center Column: Conversation & Voice Controls -->
+    <main class="conversation-panel">
+      <!-- Top Header -->
+      <header class="chat-header">
+        <div class="header-left-cluster">
+          <div class="scenario-banner" id="scenarioBannerWrap" title="Practice natural English conversation with your AI partner.">
+            <span class="banner-icon" id="activeScenarioIcon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </span>
+            <h2 id="activeScenarioTitle">Casual Daily Talk</h2>
+          </div>
+
+          <!-- 🔴 Start Live Voice Mode Button (좌측 배치로 컨트롤 공간 확보) -->
+          <button class="btn-live-mode" id="startLiveOrbBtn" title="Launch Gemini Live / ChatGPT Real-Time Voice Mode">
+            <span class="live-pulse-dot"></span>
+            <span class="live-mode-text">Live Voice</span>
+          </button>
+        </div>
+
+        <div class="header-actions">
+          <!-- Unified Controls Cluster (Model, Voice, Mode, Level) -->
+          <div class="header-controls-cluster">
+            <!-- Quick Model Switcher -->
+            <div class="control-pill" title="AI 모델 선택">
+              <span class="control-pill-icon" id="headerProviderIcon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+              </span>
+              <select id="quickModelSelect" aria-label="Select AI Model">
+                <optgroup label="Google Gemini">
+                  <option value="gemini:gemini-4-argon" selected>Gemini 4</option>
+                  <option value="gemini:gemini-3.8-flash">3.8 Flash</option>
+                  <option value="gemini:gemini-3.5-flash-lite">3.5 Lite</option>
+                </optgroup>
+                <optgroup label="OpenAI ChatGPT">
+                  <option value="openai:gpt-4o">GPT-4o</option>
+                  <option value="openai:gpt-4o-mini">GPT-4o Mini</option>
+                  <option value="openai:o3-mini">o3-mini</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Quick Voice Persona Selector (목소리 선택 탭) -->
+            <div class="control-pill" title="AI 목소리 페르소나 선택">
+              <span class="control-pill-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+              </span>
+              <select id="quickVoicePersonaSelect" aria-label="Select Voice Persona">
+                <optgroup label="Gemini Voices">
+                  <option value="kore" selected>Kore</option>
+                  <option value="puck">Puck</option>
+                  <option value="aoede">Aoede</option>
+                </optgroup>
+                <optgroup label="ChatGPT Voices">
+                  <option value="coral">Coral</option>
+                  <option value="ash">Ash</option>
+                  <option value="sage">Sage</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <!-- Quick Conversation Mode Selector (Voice / Chat) -->
+            <div class="control-pill" id="modeSwitcherWrap" title="대화 모드 (Voice: 음성 답변 / Chat: 텍스트 메신저)">
+              <span class="control-pill-icon" id="quickModeIcon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              </span>
+              <select id="quickModeSelect" aria-label="대화 모드 선택 (Voice / Chat)">
+                <option value="voice" selected>Voice</option>
+                <option value="chat">Chat</option>
+              </select>
+            </div>
+
+            <!-- Quick Conversation Level Selector (영어 레벨 표기: Basic / Intermediate / Advanced) -->
+            <div class="control-pill" title="대화 난이도 (Basic: 1~2문장 / Intermediate: 최대 4문장 / Advanced: 최대 6문장)">
+              <span class="control-pill-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+              </span>
+              <select id="quickLevelSelect" aria-label="Select Conversation Level">
+                <option value="beginner">Lv.1 Basic</option>
+                <option value="intermediate" selected>Lv.2 Inter</option>
+                <option value="advanced">Lv.3 Adv</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="header-action-cluster">
+            <button class="btn-icon-subtle" id="saveSessionBtn" title="대화 내용 복습 노트에 저장">
+              <span class="btn-icon-symbol">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              </span>
+              <span class="btn-icon-label">Save</span>
+            </button>
+            <button class="btn-icon-subtle" id="resetChatBtn" title="새 대화 시작">
+              <span class="btn-icon-symbol">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              </span>
+              <span class="btn-icon-label">New</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Conversation Stream -->
+      <section class="chat-stream" id="chatStream" aria-live="polite">
+        <!-- Populated dynamically by app.js -->
+      </section>
+
+      <!-- Suggested Next Response / Starter Hint -->
+      <div class="hint-banner" id="hintBanner">
+        <div class="hint-content">
+          <span class="hint-tag">💡 Starter Hint</span>
+          <span class="hint-text" id="hintText">"Actually, I've been trying to improve my English speaking skills lately by practicing every day."</span>
+        </div>
+        <div class="hint-actions">
+          <button class="btn-mini" id="listenHintBtn" title="Listen to pronunciation">🔊 Listen</button>
+          <button class="btn-mini primary" id="useHintBtn" title="Use this response">Use Prompt ↗</button>
+        </div>
+      </div>
+
+      <!-- Voice & Text Input Dock -->
+      <footer class="voice-dock">
+        <!-- Live Speech / Recording Visualizer -->
+        <div class="voice-visualizer hidden" id="voiceVisualizer">
+          <div class="wave-bars">
+            <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <span class="listening-status" id="listeningStatus">Listening... Speak naturally in English</span>
+          <button class="btn-stop-mic" id="stopMicBtn">Stop & Transcribe</button>
+        </div>
+
+        <!-- Self-Recording Playback Bar -->
+        <div class="self-audio-bar hidden" id="selfAudioBar">
+          <span>🎧 Recorded voice ready:</span>
+          <audio id="userAudioPlayback" controls></audio>
+        </div>
+
+        <!-- Unified Modern Input Bar -->
+        <div class="unified-input-bar">
+          <button class="mic-btn" id="micBtn" title="Record voice (Uses Gemini 3.5 Transcribe / OpenAI Whisper STT + Web Speech)">
+            <span class="mic-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            </span>
+            <span class="mic-label" id="micLabel">Speak</span>
+          </button>
+
+          <div class="text-input-wrapper">
+            <textarea
+              id="userInput"
+              rows="1"
+              placeholder="Type your message or click 'Speak' to practice speaking..."
+            ></textarea>
+          </div>
+
+          <button class="send-btn" id="sendBtn" title="Send message (Enter)">
+            <span>Send</span>
+            <span class="send-arrow">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </span>
+          </button>
+        </div>
+
+        <div class="input-footnote">
+          <span>Press <strong>Enter</strong> to send &nbsp;·&nbsp; <strong>Shift + Enter</strong> for new line &nbsp;·&nbsp; Click <strong>Live Voice</strong> for hands-free audio conversation</span>
+        </div>
+      </footer>
+    </main>
+
+    <!-- Right Panel: Real-time AI Coaching & Feedback -->
+    <aside class="coaching-panel">
+      <div class="coaching-header">
+        <div class="coaching-header-top">
+          <h3>Real-Time AI Coach</h3>
+          <button class="btn-mini primary" id="bookmarkCurrentCorrectionBtn" title="Save this correction to your Review Book">
+            Save Note
+          </button>
+        </div>
+        <span class="coaching-sub">Every correction & word is automatically logged to your History</span>
+      </div>
+
+      <div class="coaching-scroll" id="coachingScroll">
+        <!-- 1. Grammar & Accuracy Check -->
+        <div class="coach-card">
+          <div class="card-title-row">
+            <span class="card-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            </span>
+            <h4>Grammar & Accuracy</h4>
+          </div>
+          <div class="correction-box" id="grammarCorrectionBox">
+            <!-- 내 문장 카드 -->
+            <div class="user-sentence-card">
+              <div class="original-sentence-display" id="lastUserUtterance">
+                "Speak or type in English to see real-time grammar feedback and native upgrades."
+              </div>
+            </div>
+
+            <!-- 어법 교정 & 추천 1, 2 -->
+            <div class="corrected-sentence" id="correctedSentence">
+              <!-- Dynamically populated by app.js -->
+            </div>
+
+            <p class="grammar-explanation hidden" id="grammarExplanation"></p>
+          </div>
+        </div>
+
+        <!-- 2. Native Upgrade / Better Expressions -->
+        <div class="coach-card">
+          <div class="card-title-row">
+            <span class="card-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>
+            </span>
+            <h4>Sound More Like a Native</h4>
+          </div>
+          <div class="expressions-list" id="betterExpressionsList">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- 3. Pronunciation & Intonation Guide -->
+        <div class="coach-card">
+          <div class="card-title-row">
+            <span class="card-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            </span>
+            <h4>Pronunciation & Rhythm Tips</h4>
+          </div>
+          <div class="pronunciation-box" id="pronunciationBox">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- 4. Key Vocabulary & Idiom Bank -->
+        <div class="coach-card">
+          <div class="card-title-row">
+            <span class="card-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/></svg>
+            </span>
+            <h4>Key Vocabulary & Idioms</h4>
+          </div>
+          <div class="vocab-list" id="vocabList">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ==================== 🔴 REAL-TIME LIVE VOICE CALL OVERLAY (GEMINI LIVE / CHATGPT VOICE) ==================== -->
+  <div class="modal-backdrop hidden" id="liveVoiceOverlay">
+    <div class="live-orb-modal">
+      <div class="live-orb-top">
+        <span class="live-badge" id="liveModeEngineBadge">🔴 Gemini 3.8 Live Voice Session</span>
+        <button class="modal-close" id="closeLiveOrbBtn" title="Exit Live Mode">✕</button>
+      </div>
+
+      <div class="live-orb-stage">
+        <div class="live-orb" id="liveOrbVisual">
+          <div class="orb-ring ring-1"></div>
+          <div class="orb-ring ring-2"></div>
+          <div class="orb-core" id="liveOrbEmoji">🎙️</div>
+        </div>
+        <h3 class="live-state-title" id="liveStateTitle">Ready to Connect</h3>
+        <p class="live-state-subtitle" id="liveStateSubtitle">
+          Speak naturally in English — your AI partner listens and replies in real-time Live Voice.
+        </p>
+      </div>
+
+      <!-- Live Real-time Transcript Box -->
+      <div class="live-transcript-box">
+        <div class="live-transcript-line user-line">
+          <span class="lt-label">🧑 You:</span>
+          <span id="liveUserTranscript">Waiting for your voice...</span>
+        </div>
+        <div class="live-transcript-line ai-line">
+          <span class="lt-label">🤖 AI Partner:</span>
+          <span id="liveAiTranscript">Click "Start Live Call" or speak into your microphone.</span>
+        </div>
+      </div>
+
+      <div class="live-controls-row">
+        <button class="btn-live-action start" id="toggleLiveStreamBtn">
+          🎙️ Start Talking
+        </button>
+        <button class="btn-live-action end" id="endLiveCallBtn">
+          📞 End Live Mode
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SPEAKING HISTORY & REVIEW BOOK MODAL ==================== -->
+  <div class="modal-backdrop hidden" id="historyModal">
+    <div class="modal-card history-modal-card" role="dialog" aria-labelledby="historyModalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="historyModalTitle">📓 Speaking History & Review Notebook</h3>
+          <p class="modal-subtitle">Review your corrected sentences, saved vocabulary, and past speaking sessions.</p>
+        </div>
+        <div class="history-header-actions">
+          <button class="btn-secondary" id="exportHistoryBtn" title="Download all corrections & vocabulary as a Markdown study guide">
+            📥 Export Study Guide (.md)
+          </button>
+          <button class="modal-close" id="closeHistoryBtn" aria-label="Close">✕</button>
+        </div>
+      </div>
+
+      <!-- Tabs & Search -->
+      <div class="history-toolbar">
+        <div class="history-tabs">
+          <button class="history-tab active" data-tab="sentences">
+            🔧 Corrected Sentences (<span id="tabCountSentences">0</span>)
+          </button>
+          <button class="history-tab" data-tab="vocabulary">
+            📚 Saved Vocabulary (<span id="tabCountVocab">0</span>)
+          </button>
+          <button class="history-tab" data-tab="sessions">
+            💬 Saved Chat Sessions (<span id="tabCountSessions">0</span>)
+          </button>
+        </div>
+        <div class="history-search-wrap">
+          <input type="text" id="historySearchInput" placeholder="🔍 Search sentences, grammar tips, or words..." />
+          <label class="filter-star-label">
+            <input type="checkbox" id="filterStarredOnly" />
+            <span>⭐ Starred only</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tab Content Containers -->
+      <div class="history-body">
+        <!-- Tab 1: Corrected Sentences -->
+        <div class="history-tab-panel" id="tabPanelSentences">
+          <div class="history-list" id="sentenceHistoryList"></div>
+        </div>
+
+        <!-- Tab 2: Vocabulary & Idioms -->
+        <div class="history-tab-panel hidden" id="tabPanelVocabulary">
+          <div class="history-list vocab-grid" id="vocabHistoryList"></div>
+        </div>
+
+        <!-- Tab 3: Saved Chat Sessions -->
+        <div class="history-tab-panel hidden" id="tabPanelSessions">
+          <div class="history-list" id="sessionHistoryList"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer history-footer">
+        <button class="btn-danger-outline" id="clearHistoryBtn">🗑️ Clear All History</button>
+        <button class="btn-primary" id="doneHistoryBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS MODAL (GEMINI + CHATGPT + LIVE VOICE) ==================== -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card" role="dialog" aria-labelledby="settingsModalTitle">
+      <div class="modal-header">
+        <h3 id="settingsModalTitle">⚙️ AI Provider (Gemini & ChatGPT) & Live Voice Settings</h3>
+        <button class="modal-close" id="closeSettingsBtn" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="voice-explainer-banner">
+          <strong>🎙️ How to hear Real Gemini Live / ChatGPT Voices:</strong>
+          <p>
+            Enter your <strong>Gemini API Key</strong> or <strong>OpenAI API Key</strong> below. When an API key is active, SpeakFlow automatically uses <strong>Gemini Live Voices (Puck, Aoede, Kore, Charon, Fenrir)</strong> or <strong>ChatGPT Voices (Coral, Nova, Alloy, Sage, Ash)</strong> instead of your computer's basic browser voice!
+          </p>
+        </div>
+
+        <!-- AI Provider & Model Selector -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="providerSelect">Active AI Provider</label>
+            <select id="providerSelect">
+              <option value="gemini" selected>✨ Google Gemini (Interactions + Live API)</option>
+              <option value="openai">🤖 OpenAI ChatGPT (GPT-4o + OpenAI Voice)</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="geminiModelGroup">
+            <label for="modelSelect">Gemini Model</label>
+            <select id="modelSelect">
+              <option value="gemini-4-argon" selected>Gemini 4 Argon (gemini-4-argon) — Flagship</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (gemini-3.8-flash) — Fast</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (gemini-3.5-flash-lite)</option>
+            </select>
+          </div>
+
+          <div class="form-group hidden" id="openaiModelGroup">
+            <label for="openaiModelSelect">ChatGPT Model</label>
+            <select id="openaiModelSelect">
+              <option value="gpt-4o" selected>GPT-4o (gpt-4o) — Flagship Omni</option>
+              <option value="gpt-4o-mini">GPT-4o Mini (gpt-4o-mini) — Fast & Light</option>
+              <option value="o3-mini">o3-mini (o3-mini) — Deep Reasoning</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Gemini API Key -->
+        <div class="form-group">
+          <label for="apiKeyInput">✨ Google Gemini API Key (Enables Gemini 3.8 Live & TTS Voices + Gemini 3.5 Transcribe)</label>
+          <div class="key-input-row">
+            <input
+              type="password"
+              id="apiKeyInput"
+              placeholder="AIzaSy... (Enter key to activate real Gemini Live voice)"
+              autocomplete="off"
+            />
+            <button type="button" class="btn-outline" id="toggleKeyVisibility">👁️</button>
+          </div>
+        </div>
+
+        <!-- OpenAI ChatGPT API Key -->
+        <div class="form-group">
+          <label for="openaiApiKeyInput">🤖 OpenAI ChatGPT API Key (Enables ChatGPT Voice Mode TTS & Whisper Voice Input)</label>
+          <div class="key-input-row">
+            <input
+              type="password"
+              id="openaiApiKeyInput"
+              placeholder="sk-proj-... (Enter key to activate real ChatGPT voice)"
+              autocomplete="off"
+            />
+            <button type="button" class="btn-outline" id="toggleOpenaiKeyVisibility">👁️</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="ttsEngineSelect">🔊 Voice Output Mode (TTS Engine)</label>
+            <select id="ttsEngineSelect">
+              <option value="auto-ai" selected>🌟 Auto AI Live Voice (Gemini TTS / ChatGPT Voice when Key set)</option>
+              <option value="gemini-3.8-flash-tts">✨ Gemini 3.8 Flash TTS (Expressive Live Voice)</option>
+              <option value="gemini-3.8-flash-lite-tts">⚡ Gemini 3.8 Flash-Lite TTS (Fast Live Voice)</option>
+              <option value="openai-tts">🤖 ChatGPT Voice Mode TTS (gpt-4o-mini-tts / tts-1)</option>
+              <option value="browser">💻 Browser Built-in TTS (Offline Free Fallback)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="sttEngineSelect">🎙️ Voice Input Mode (음성기록 / STT)</label>
+            <select id="sttEngineSelect">
+              <option value="hybrid" selected>🌟 AI Voice Recording (Gemini 3.5 Transcribe / OpenAI Whisper + Live Preview)</option>
+              <option value="browser">💻 Browser Web Speech Only</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="learnerLevelSelect">대화 수준 (Conversation Level)</label>
+            <select id="learnerLevelSelect">
+              <option value="beginner">1. 초급대화 (쉬운 영어 · 1~2문장 내외)</option>
+              <option value="intermediate" selected>2. 중급대화 (중급 단어/문장 · 단문 혼용 최대 4문장)</option>
+              <option value="advanced">3. 고급대화 (고급 단어/문장 · 단문 혼용 최대 6문장)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="speechRateSelect">AI Speaking Speed</label>
+            <select id="speechRateSelect">
+              <option value="0.85">0.85x (Clear & Slow)</option>
+              <option value="1.0" selected>1.0x (Natural Live Speed)</option>
+              <option value="1.15">1.15x (Brisk Native Pace)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="voiceAccentSelect">Fallback Browser Accent</label>
+            <select id="voiceAccentSelect">
+              <option value="en-US" selected>🇺🇸 American English (en-US)</option>
+              <option value="en-GB">🇬🇧 British English (en-GB)</option>
+              <option value="en-AU">🇦🇺 Australian English (en-AU)</option>
+            </select>
+          </div>
+
+          <div class="form-group checkbox-group" style="justify-content: flex-end; padding-bottom: 6px;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="autoSpeakToggle" checked />
+              <span>Auto-speak AI replies aloud</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="testVoiceBtn">Test Selected AI Voice</button>
+        <button class="btn-secondary" id="testConnectionBtn">Test AI Connection</button>
+        <button class="btn-primary" id="saveSettingsBtn">Save & Apply</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast hidden" id="toastNotification">Saved to Review Notebook!</div>
+
+  <script src="app.js?v=9"></script>
+</body>
+</html>
