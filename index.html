@@ -2,24 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Fluency AI — Real-Time English Speaking & Fluency Coach</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
-  <div class="app-shell">
+  <!-- Mobile Drawer Backdrop Overlay -->
+  <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop"></div>
+
+  <div class="app-shell" id="appShell">
     <!-- Left Sidebar: Scenarios, Progress, History & Settings -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+    <aside class="sidebar" id="appSidebar">
+      <div class="sidebar-header-row">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+          </div>
+          <div>
+            <h1>Fluency AI</h1>
+          </div>
         </div>
-        <div>
-          <h1>Fluency AI</h1>
-        </div>
+        <button class="btn-mobile-sidebar-close" id="mobileSidebarCloseBtn" aria-label="Close sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <!-- History & Review Book Quick Access -->
@@ -132,11 +140,29 @@
       <!-- Top Header -->
       <header class="chat-header">
         <div class="header-left-cluster">
+          <!-- Mobile Hamburger Drawer Button -->
+          <button class="btn-mobile-menu" id="mobileMenuBtn" aria-label="Open navigation menu" title="Scenarios & Settings">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+
           <div class="scenario-banner" id="scenarioBannerWrap" title="Practice natural English conversation with your AI partner.">
             <span class="banner-icon" id="activeScenarioIcon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </span>
             <h2 id="activeScenarioTitle">Casual Daily Talk</h2>
+          </div>
+
+          <!-- Mobile View Switcher (Chat vs AI Coach) -->
+          <div class="mobile-view-tabs" id="mobileViewTabs">
+            <button class="mobile-tab-btn active" id="mobileTabChat" data-tab="chat" aria-label="Switch to conversation">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Chat</span>
+            </button>
+            <button class="mobile-tab-btn" id="mobileTabCoach" data-tab="coach" aria-label="Switch to AI Coach feedback">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Coach</span>
+              <span class="mobile-coach-badge hidden" id="mobileCoachBadge"></span>
+            </button>
           </div>
 
           <!-- 🔴 Start Live Voice Mode Button (좌측 배치로 컨트롤 공간 확보) -->
@@ -297,6 +323,11 @@
     <aside class="coaching-panel">
       <div class="coaching-header">
         <div class="coaching-header-top">
+          <!-- Mobile Back to Chat Button -->
+          <button class="btn-mobile-back-chat" id="mobileBackToChatBtn" aria-label="Back to chat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span>Chat</span>
+          </button>
           <h3>Real-Time AI Coach</h3>
           <button class="btn-mini primary" id="bookmarkCurrentCorrectionBtn" title="Save this correction to your Review Book">
             Save Note

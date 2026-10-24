@@ -521,8 +521,35 @@ const dom = {
   testVoiceBtn: document.getElementById("testVoiceBtn"),
   testConnectionBtn: document.getElementById("testConnectionBtn"),
   saveSettingsBtn: document.getElementById("saveSettingsBtn"),
-  toastNotification: document.getElementById("toastNotification")
+  toastNotification: document.getElementById("toastNotification"),
+  // Mobile Navigation
+  appShell: document.getElementById("appShell"),
+  mobileMenuBtn: document.getElementById("mobileMenuBtn"),
+  mobileSidebarCloseBtn: document.getElementById("mobileSidebarCloseBtn"),
+  mobileDrawerBackdrop: document.getElementById("mobileDrawerBackdrop"),
+  mobileTabChat: document.getElementById("mobileTabChat"),
+  mobileTabCoach: document.getElementById("mobileTabCoach"),
+  mobileCoachBadge: document.getElementById("mobileCoachBadge"),
+  mobileBackToChatBtn: document.getElementById("mobileBackToChatBtn")
 };
+
+function setMobileActiveView(viewName) {
+  if (!dom.appShell) return;
+  dom.appShell.setAttribute("data-mobile-view", viewName);
+  if (dom.mobileTabChat) dom.mobileTabChat.classList.toggle("active", viewName === "chat");
+  if (dom.mobileTabCoach) dom.mobileTabCoach.classList.toggle("active", viewName === "coach");
+  if (viewName === "coach" && dom.mobileCoachBadge) {
+    dom.mobileCoachBadge.classList.add("hidden");
+  }
+}
+
+function openMobileSidebar() {
+  if (dom.appShell) dom.appShell.classList.add("sidebar-open");
+}
+
+function closeMobileSidebar() {
+  if (dom.appShell) dom.appShell.classList.remove("sidebar-open");
+}
 
 // Initialize Application
 function initApp() {
@@ -532,6 +559,7 @@ function initApp() {
   bindEvents();
   loadScenario(state.scenario);
   updateHistoryBadges();
+  setMobileActiveView("chat");
 }
 
 function getActiveModelString() {
@@ -898,6 +926,11 @@ function renderCoachingFeedback(coaching) {
 
   if (dom.grammarExplanation) {
     dom.grammarExplanation.textContent = coaching.grammarExplanation || "문맥에 맞는 정확한 시제, 전치사, 관사 및 원어민 어순을 안내해 드립니다.";
+  }
+
+  // Mobile: If user receives new coaching while on Chat view, show notification badge on Coach tab!
+  if (!isInitialOrPlaceholder && dom.mobileCoachBadge && dom.appShell && dom.appShell.getAttribute("data-mobile-view") !== "coach") {
+    dom.mobileCoachBadge.classList.remove("hidden");
   }
 
   // 2. 실시간 평가 점수표 업데이트 (어법 점수 / 자연스러움 점수)
@@ -2840,10 +2873,27 @@ function stopLiveVoiceSession() {
 
 // ==================== EVENT LISTENERS ====================
 function bindEvents() {
+  // Mobile Drawer Navigation Events
+  if (dom.mobileMenuBtn) dom.mobileMenuBtn.addEventListener("click", openMobileSidebar);
+  if (dom.mobileSidebarCloseBtn) dom.mobileSidebarCloseBtn.addEventListener("click", closeMobileSidebar);
+  if (dom.mobileDrawerBackdrop) dom.mobileDrawerBackdrop.addEventListener("click", closeMobileSidebar);
+
+  // Mobile View Switcher (Chat vs AI Coach)
+  if (dom.mobileTabChat) {
+    dom.mobileTabChat.addEventListener("click", () => setMobileActiveView("chat"));
+  }
+  if (dom.mobileTabCoach) {
+    dom.mobileTabCoach.addEventListener("click", () => setMobileActiveView("coach"));
+  }
+  if (dom.mobileBackToChatBtn) {
+    dom.mobileBackToChatBtn.addEventListener("click", () => setMobileActiveView("chat"));
+  }
+
   dom.scenarioList.addEventListener("click", (e) => {
     const btn = e.target.closest(".scenario-btn");
     if (!btn) return;
     loadScenario(btn.dataset.scenario);
+    closeMobileSidebar();
   });
 
   // Header Quick Model Switcher — automatically switches both the AI model AND its signature neural voice!
