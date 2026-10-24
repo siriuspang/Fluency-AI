@@ -1753,7 +1753,11 @@ function generateLocalDemoCoaching(userText) {
     // User asked how the AI is doing
     reply = `I'm doing great, thanks for asking! I'm always energized for a good conversation. How about you—how has your day been treating you?`;
     followUpHint = "My day has been pretty productive, and now I'm taking a break to practice my English.";
-  } else if (/help|how do we|what should i say|don't know/i.test(lower)) {
+  } else if (/\b(?:i\s+)?don'?t\s+know\b/i.test(lower) || /\b(?:y|i)\s+jd=\s*know\b/i.test(lower) || /\bidk\b/i.test(lower) || /\bjd=\b/i.test(lower) || /\bnot\s+sure\b/i.test(lower)) {
+    // User said "I don't know" or similar uncertainty
+    reply = "No worries at all! There is no wrong answer here. What is one simple thought or question that comes to mind?";
+    followUpHint = "I'm not completely sure yet, but I'd like to hear what you think about it.";
+  } else if (/help|how do we|what should i say/i.test(lower)) {
     // User asked for help or guidance
     reply = `No worries at all—that's what I'm here for! Since I'm ${persona.name}, you can just talk to me naturally. Try telling me one thing you did today or one goal you have this month, and I'll coach your phrasing as we go!`;
     followUpHint = "One of my main goals this month is to feel more comfortable speaking English at work.";
@@ -1824,6 +1828,32 @@ function generateLocalDemoCoaching(userText) {
   let corrected = clean;
   let isPerfect = true;
   const notes = [];
+
+  // 0. Keyboard slip & text abbreviation fixes (e.g. "y jd= know" -> "I don't know")
+  if (/\b(?:y|i)\s+(?:jd=|dnt|dn't|dont|dno)\s+know\b/i.test(corrected) || /\bjd=\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(?:y|i)?\s*(?:jd=|dnt|dn't|dont|dno)\s+know\b/gi, "I don't know");
+    corrected = corrected.replace(/\bjd=\b/gi, "don't");
+    isPerfect = false;
+    notes.push(`Typo & keyboard slip fix: "y jd= know" is a typo for "I don't know".`);
+  } else if (/\bidk\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bidk\b/gi, "I don't know");
+    isPerfect = false;
+    notes.push(`Abbreviation fix: "idk" stands for "I don't know".`);
+  }
+
+  // Single letter words that are invalid in English (only 'I' and 'a' are valid)
+  if (/\by\s+(?:know|think|see|want|like|need|can|will|have|feel|am)\b/i.test(corrected)) {
+    corrected = corrected.replace(/\by\s+(know|think|see|want|like|need|can|will|have|feel|am)\b/gi, "I $1");
+    isPerfect = false;
+    notes.push(`Typo fix: use the capital pronoun "I" instead of "y".`);
+  }
+
+  // Accidental non-alphabetic symbol cleanup
+  if (/[=_+~^%$#@\\/]/.test(corrected)) {
+    isPerfect = false;
+    corrected = corrected.replace(/[=_+~^%$#@\\/]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    notes.push("Typo fix: removed accidental keyboard symbols.");
+  }
 
   const clientGrammarRules = [
     // Preposition & Idiomatic Collocations
@@ -1905,6 +1935,22 @@ function generateLocalDemoCoaching(userText) {
     corrected += isQ ? "?" : ".";
   }
 
+  // Validity check on individual tokens (detect non-English gibberish / key mash / invalid letters)
+  const tokens = corrected.trim().split(/\s+/).filter(Boolean);
+  const hasInvalidToken = tokens.some((w) => {
+    const cleanWord = w.toLowerCase().replace(/^[^\w]+|[^\w]+$/g, "");
+    if (!cleanWord) return false;
+    if (cleanWord.length > 2 && !/[aeiouy]/i.test(cleanWord)) return true;
+    if (/[^a-zA-Z\'-]/.test(cleanWord)) return true;
+    if (cleanWord.length === 1 && cleanWord !== "i" && cleanWord !== "a") return true;
+    return false;
+  });
+
+  if (hasInvalidToken) {
+    isPerfect = false;
+    notes.push("Please check your spelling; some characters or words do not appear to be standard English.");
+  }
+
   // Double check if text changed
   if (corrected.toLowerCase().replace(/[^\w\s]/g, "") !== clean.toLowerCase().replace(/[^\w\s]/g, "")) {
     isPerfect = false;
@@ -1916,7 +1962,19 @@ function generateLocalDemoCoaching(userText) {
 
   // 3. Contextual Better Expressions based on what the user actually said
   let expressions = [];
-  if (/who are you|what is your name|introduce/i.test(lower)) {
+  if (/\b(?:i\s+)?don'?t\s+know\b/i.test(lower) || /\b(?:y|i)\s+jd=\s*know\b/i.test(lower) || /\bidk\b/i.test(lower) || /\bjd=\b/i.test(lower)) {
+    expressions = [
+      { tone: "Casual Native", phrase: "I'm not really sure, to be honest." },
+      { tone: "Fluent & Expressive", phrase: "I don't have much information about that right now." },
+      { tone: "Conversational", phrase: "I have no idea at the moment." }
+    ];
+  } else if (tokens.length <= 2) {
+    expressions = [
+      { tone: "Conversational", phrase: "Could you tell me a little more about that?" },
+      { tone: "Natural Native", phrase: "I'd love to hear more details when you have a moment." },
+      { tone: "Engaging", phrase: "That makes sense—what else happened?" }
+    ];
+  } else if (/who are you|what is your name|introduce/i.test(lower)) {
     expressions = [
       { tone: "Warm & Polite", phrase: "Hi there! It's great to meet you—could you tell me a little about yourself?" },
       { tone: "Casual Native", phrase: "Hey! Before we dive in, who am I chatting with today?" },

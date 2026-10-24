@@ -403,6 +403,32 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
   const notes = [];
   let isPerfect = true;
 
+  // 0. Keyboard slip & text abbreviation fixes (e.g. "y jd= know" -> "I don't know")
+  if (/\b(?:y|i)\s+(?:jd=|dnt|dn't|dont|dno)\s+know\b/i.test(corrected) || /\bjd=\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(?:y|i)?\s*(?:jd=|dnt|dn't|dont|dno)\s+know\b/gi, "I don't know");
+    corrected = corrected.replace(/\bjd=\b/gi, "don't");
+    isPerfect = false;
+    notes.push(`Typo & keyboard slip fix: "y jd= know" is a typo for "I don't know".`);
+  } else if (/\bidk\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bidk\b/gi, "I don't know");
+    isPerfect = false;
+    notes.push(`Abbreviation fix: "idk" stands for "I don't know".`);
+  }
+
+  // Single letter words that are invalid in English (only 'I' and 'a' are valid)
+  if (/\by\s+(?:know|think|see|want|like|need|can|will|have|feel|am)\b/i.test(corrected)) {
+    corrected = corrected.replace(/\by\s+(know|think|see|want|like|need|can|will|have|feel|am)\b/gi, "I $1");
+    isPerfect = false;
+    notes.push(`Typo fix: use the capital pronoun "I" instead of "y".`);
+  }
+
+  // Accidental non-alphabetic symbol cleanup
+  if (/[=_+~^%$#@\\/]/.test(corrected)) {
+    isPerfect = false;
+    corrected = corrected.replace(/[=_+~^%$#@\\/]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    notes.push("Typo fix: removed accidental keyboard symbols.");
+  }
+
   // 1. Common spelling fixes (applied first so downstream rules see clean spelling)
   const spellingMap = [
     { regex: /\blibary\b/gi, replacement: "library", word: '"libary" → "library" (don\'t forget the first "r" after "b")' },
@@ -932,6 +958,25 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     corrected += isQ ? "?" : ".";
   }
 
+  // Validity check on individual tokens (detect non-English gibberish / key mash / invalid letters)
+  const tokens = corrected.trim().split(/\s+/).filter(Boolean);
+  const hasInvalidToken = tokens.some((w) => {
+    const cleanWord = w.toLowerCase().replace(/^[^\w]+|[^\w]+$/g, "");
+    if (!cleanWord) return false;
+    // Word with no vowels (and not legitimate short abbreviations)
+    if (cleanWord.length > 2 && !/[aeiouy]/i.test(cleanWord)) return true;
+    // Word with non-letter characters in middle (e.g. jd=)
+    if (/[^a-zA-Z\'-]/.test(cleanWord)) return true;
+    // Single letter other than 'i' or 'a'
+    if (cleanWord.length === 1 && cleanWord !== "i" && cleanWord !== "a") return true;
+    return false;
+  });
+
+  if (hasInvalidToken) {
+    isPerfect = false;
+    notes.push("Please check your spelling; some characters or words do not appear to be standard English.");
+  }
+
   // 17. Coaching Tip When User's Original Sentence Has No Hard Grammar Errors
   // Keep `corrected` as the user's exact grammatically-valid sentence (1st item), and explain the nuance of the recommended alternatives below!
   const stripPunct = (s) => s.replace(/[.!?]+$/g, "").trim().toLowerCase();
@@ -981,6 +1026,15 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
  */
 function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
   const lower = rawOriginal.trim().toLowerCase();
+
+  // 0. Uncertainty / Don't know / idk / keyboard slips
+  if (/\b(?:i\s+)?don'?t\s+know\b/i.test(lower) || /\b(?:y|i)\s+jd=\s*know\b/i.test(lower) || /\bidk\b/i.test(lower) || /\bjd=\b/i.test(lower)) {
+    return [
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: "I don't know." },
+      { label: "추천 1 · Casual Native", sentence: "I'm not really sure, to be honest." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "I don't have much information about that right now." }
+    ];
+  }
 
   // 1. Building tool with AGY / impressive
   if (/impressive.*agy|made it with agy|built it with agy/i.test(lower)) {
@@ -1089,6 +1143,15 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
   const coreLowerFirst = core.length > 1 ? core.charAt(0).toLowerCase() + core.slice(1) : core.toLowerCase();
   const isQuestion = /\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
 
+  const words = core.split(/\s+/).filter(Boolean);
+  if (words.length <= 2) {
+    return [
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
+      { label: "추천 1 · Casual Native", sentence: "Could you tell me a little more about that?" },
+      { label: "추천 2 · Fluent & Expressive", sentence: "I'd love to hear more details when you have a moment." }
+    ];
+  }
+
   if (isQuestion) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
@@ -1139,6 +1202,36 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
   let pronunciationTips = [];
   let keyVocabulary = [];
   let recommendedSpeechRate = null;
+
+  // 0a. UNCERTAINTY / "I don't know" / "idk" / "y jd= know"
+  if (
+    /\b(?:i\s+)?don'?t\s+know\b/i.test(lower) ||
+    /\b(?:y|i)\s+jd=\s*know\b/i.test(lower) ||
+    /\bidk\b/i.test(lower) ||
+    /\bjd=\b/i.test(lower) ||
+    /\bnot\s+sure\b/i.test(lower)
+  ) {
+    reply = pickFreshReply([
+      "No worries at all! There is no wrong answer here. What is one simple thought or question that comes to mind?",
+      "That is completely fine! We can take our time. Would you like to share a little thought, or should we try a different topic?",
+      "No problem! Take all the time you need. What are you most curious about right now?"
+    ]);
+    followUpHint = "I'm not completely sure yet, but I'd like to hear what you think about it.";
+    betterExpressions = [
+      { tone: "Direct Fix", phrase: "I don't know." },
+      { tone: "Casual Native", phrase: "I'm not really sure, to be honest." },
+      { tone: "Fluent & Expressive", phrase: "I don't have much information on that right now." }
+    ];
+    pronunciationTips = [
+      { word: "don't know (doʊn-noʊ)", tip: "In conversational English, native speakers often blend 'don't know' into 'dohn-noh' (/doʊn-noʊ/)." },
+      { word: "not sure (nɑt ʃʊr)", tip: "Make a clean, soft /ʃ/ ('sh') sound on 'sure', not an /s/ sound." }
+    ];
+    keyVocabulary = [
+      { word: "no worries", meaning: "A friendly way to say 'it's not a problem' or 'don't stress'." },
+      { word: "take your time", meaning: "To do something without rushing." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
+  }
 
   // 0. VOICE SPEED, PACE & SIMPLICITY CONTROL ("Your speed is a little fast to me. Please slow down...", "Can you speak more slowly?")
   if (
@@ -1949,7 +2042,7 @@ function callPollinationsFallbackLLM(promptText) {
         });
       }
     );
-    req.setTimeout(14000, () => {
+    req.setTimeout(3500, () => {
       req.destroy();
       resolve("");
     });
@@ -1973,14 +2066,21 @@ function extractFirstJsonObject(rawStr) {
 }
 
 function formatFullCoachingPayload(parsed, userMessage, localGrammar, levelKey) {
-  const directFix = (parsed?.direct_fix || localGrammar.corrected || userMessage).trim();
+  let directFix = (parsed?.direct_fix || "").trim();
+  if (!directFix || /[=_+~^%$#@\\/]/.test(directFix) || (directFix.toLowerCase() === userMessage.toLowerCase() && !localGrammar.isPerfect)) {
+    if (!localGrammar.isPerfect && localGrammar.corrected) {
+      directFix = localGrammar.corrected;
+    } else if (!directFix) {
+      directFix = userMessage;
+    }
+  }
   const casualNative = (parsed?.casual_native || localGrammar.correctedVariants?.[1]?.sentence || directFix).trim();
   const fluentPolite = (parsed?.fluent_polite || localGrammar.correctedVariants?.[2]?.sentence || directFix).trim();
 
-  // Determine if grammar is truly perfect: if directFix differs from userMessage, it's NOT perfect!
+  // Determine if grammar is truly perfect: if directFix differs from userMessage or has typos, it's NOT perfect!
   const hasDiff = directFix.toLowerCase().replace(/[^\w\s]/g, "") !== userMessage.toLowerCase().replace(/[^\w\s]/g, "");
   let isGrammarPerfect = false;
-  if (!hasDiff) {
+  if (!hasDiff && localGrammar.isPerfect) {
     isGrammarPerfect = typeof parsed?.is_grammar_perfect === "boolean" ? parsed.is_grammar_perfect : localGrammar.isPerfect;
   }
 
