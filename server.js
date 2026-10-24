@@ -38,24 +38,36 @@ const NEURAL_VOICE_MAP = {
   "openai:sage": { edgeVoice: "en-GB-ThomasNeural", pitch: "-2Hz", rate: "+0%", fallbackTl: "en-GB" },
   "openai:ash": { edgeVoice: "en-US-BrianMultilingualNeural", pitch: "-2Hz", rate: "+3%", fallbackTl: "en-IE" },
   "openai:shimmer": { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" },
-  // Short-name fallbacks
+  // Short-name & case-insensitive fallbacks
   Kore: { edgeVoice: "en-US-AvaMultilingualNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-US" },
+  kore: { edgeVoice: "en-US-AvaMultilingualNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-US" },
   Puck: { edgeVoice: "en-US-AndrewMultilingualNeural", pitch: "+2Hz", rate: "+7%", fallbackTl: "en-CA" },
+  puck: { edgeVoice: "en-US-AndrewMultilingualNeural", pitch: "+2Hz", rate: "+7%", fallbackTl: "en-CA" },
   Aoede: { edgeVoice: "en-GB-SoniaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-GB" },
+  aoede: { edgeVoice: "en-GB-SoniaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-GB" },
   Charon: { edgeVoice: "en-GB-RyanNeural", pitch: "-3Hz", rate: "+0%", fallbackTl: "en-IE" },
+  charon: { edgeVoice: "en-GB-RyanNeural", pitch: "-3Hz", rate: "+0%", fallbackTl: "en-IE" },
   Fenrir: { edgeVoice: "en-US-GuyNeural", pitch: "-4Hz", rate: "+4%", fallbackTl: "en-AU" },
+  fenrir: { edgeVoice: "en-US-GuyNeural", pitch: "-4Hz", rate: "+4%", fallbackTl: "en-AU" },
   coral: { edgeVoice: "en-US-JennyNeural", pitch: "+3Hz", rate: "+4%", fallbackTl: "en-US" },
+  Coral: { edgeVoice: "en-US-JennyNeural", pitch: "+3Hz", rate: "+4%", fallbackTl: "en-US" },
   nova: { edgeVoice: "en-AU-NatashaNeural", pitch: "+1Hz", rate: "+5%", fallbackTl: "en-AU" },
+  Nova: { edgeVoice: "en-AU-NatashaNeural", pitch: "+1Hz", rate: "+5%", fallbackTl: "en-AU" },
   alloy: { edgeVoice: "en-US-AriaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-CA" },
+  Alloy: { edgeVoice: "en-US-AriaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-CA" },
   sage: { edgeVoice: "en-GB-ThomasNeural", pitch: "-2Hz", rate: "+0%", fallbackTl: "en-GB" },
+  Sage: { edgeVoice: "en-GB-ThomasNeural", pitch: "-2Hz", rate: "+0%", fallbackTl: "en-GB" },
   ash: { edgeVoice: "en-US-BrianMultilingualNeural", pitch: "-2Hz", rate: "+3%", fallbackTl: "en-IE" },
-  shimmer: { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" }
+  Ash: { edgeVoice: "en-US-BrianMultilingualNeural", pitch: "-2Hz", rate: "+3%", fallbackTl: "en-IE" },
+  shimmer: { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" },
+  Shimmer: { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" }
 };
 
 const MODEL_PERSONAS = {
   "gemini-4-argon": {
     displayName: "Gemini 4 Argon",
     defaultVoiceName: "Kore",
+    systemStyle: "MODEL IDENTITY: Google Gemini 4 Argon. Your conversational style is thoughtful, warm, intellectually curious, and expressive. You share relatable thoughts, use vivid natural metaphors, and ask insightful questions that encourage the speaker to elaborate.",
     selfIntro: (roleName, scenarioTitle) =>
       `Hi there! I'm ${roleName}, your English speaking partner. What topic would you love to talk about together today?`,
     greetingReply: (roleName) =>
@@ -66,6 +78,7 @@ const MODEL_PERSONAS = {
   "gemini-3.8-flash": {
     displayName: "Gemini 3.8 Flash",
     defaultVoiceName: "Puck",
+    systemStyle: "MODEL IDENTITY: Google Gemini 3.8 Flash. Your conversational style is energetic, lively, quick, and snappy. You use modern conversational spoken idioms and keep your responses upbeat, fast-paced, and punchy.",
     selfIntro: (roleName, scenarioTitle) =>
       `Hey! I'm ${roleName}, your English conversation partner. What's something fun or interesting you've been up to this week?`,
     greetingReply: (roleName) =>
@@ -76,6 +89,7 @@ const MODEL_PERSONAS = {
   "gemini-3.5-flash-lite": {
     displayName: "Gemini 3.5 Flash-Lite",
     defaultVoiceName: "Aoede",
+    systemStyle: "MODEL IDENTITY: Google Gemini 3.5 Flash-Lite. Your style is concise, crisp, clear, and direct. You keep your responses short (1-2 sentences), structured, and easy to follow.",
     selfIntro: (roleName, scenarioTitle) =>
       `Lovely to meet you! I'm ${roleName}, your English speaking partner. Shall we start with a quick chat about your day?`,
     greetingReply: (roleName) =>
@@ -86,6 +100,7 @@ const MODEL_PERSONAS = {
   "gpt-4o": {
     displayName: "ChatGPT (GPT-4o)",
     defaultVoiceName: "Coral",
+    systemStyle: "MODEL IDENTITY: OpenAI ChatGPT (GPT-4o). Your conversational style is polished, empathetic, naturally conversational, and engaging. You respond with genuine human warmth and conversational storytelling.",
     selfIntro: (roleName, scenarioTitle) =>
       `It's so nice to meet you! I'm ${roleName}, your English conversation partner. Tell me, what inspired you to practice English today?`,
     greetingReply: (roleName) =>
@@ -96,6 +111,7 @@ const MODEL_PERSONAS = {
   "gpt-4o-mini": {
     displayName: "ChatGPT (GPT-4o Mini)",
     defaultVoiceName: "Ash",
+    systemStyle: "MODEL IDENTITY: OpenAI ChatGPT (GPT-4o Mini). Your style is friendly, casual, everyday conversational, supportive, and relaxed, making everyday English practice feel like talking to a close friend.",
     selfIntro: (roleName, scenarioTitle) =>
       `Hey there, nice to meet you! I'm ${roleName}, your English speaking partner. What's one topic you enjoy talking about in English?`,
     greetingReply: (roleName) =>
@@ -106,6 +122,7 @@ const MODEL_PERSONAS = {
   "o3-mini": {
     displayName: "ChatGPT (o3-mini)",
     defaultVoiceName: "Sage",
+    systemStyle: "MODEL IDENTITY: OpenAI ChatGPT (o3-mini). Your style is articulate, precise, and thoughtful, focusing on lexical accuracy, rich vocabulary choices, and nuanced phrasing.",
     selfIntro: (roleName, scenarioTitle) =>
       `Good day! I'm ${roleName}, your English speaking coach. Which topic or speaking goal would you like to focus on first today?`,
     greetingReply: (roleName) =>
@@ -204,6 +221,43 @@ async function getOrCreateEdgeTtsInstance(edgeVoice) {
   return tts;
 }
 
+function synthesizeWithPythonEdgeTts(text, edgeVoice, speedNumeric = 1.0) {
+  return new Promise((resolve) => {
+    const tmpFile = path.join(os.tmpdir(), `tts_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp3`);
+    const rateDelta = Math.round((Number(speedNumeric || 1.0) - 1.0) * 100);
+    const rateArg = `${rateDelta >= 0 ? "+" : ""}${rateDelta}%`;
+    const child = spawn("python", [
+      "-m", "edge_tts",
+      "--voice", edgeVoice,
+      "--text", text.slice(0, 450),
+      "--rate", rateArg,
+      "--write-media", tmpFile
+    ], { windowsHide: true });
+
+    const timer = setTimeout(() => {
+      try { child.kill(); } catch (e) {}
+      resolve(null);
+    }, 3800);
+
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (code === 0 && fs.existsSync(tmpFile)) {
+        try {
+          const buffer = fs.readFileSync(tmpFile);
+          fs.unlinkSync(tmpFile);
+          resolve(buffer);
+          return;
+        } catch (e) {}
+      }
+      resolve(null);
+    });
+    child.on("error", () => {
+      clearTimeout(timer);
+      resolve(null);
+    });
+  });
+}
+
 async function synthesizeEdgeNeuralTTS(text, voiceKey = "gemini:Kore", speedNumeric = 1.0) {
   const cfg = NEURAL_VOICE_MAP[voiceKey] || NEURAL_VOICE_MAP["gemini:Kore"];
   const cacheKey = `${voiceKey}::${speedNumeric}::${text}`;
@@ -215,70 +269,24 @@ async function synthesizeEdgeNeuralTTS(text, voiceKey = "gemini:Kore", speedNume
   }
 
   const runSynthesis = (async () => {
-    const rateDelta = Math.round((Number(speedNumeric || 1.0) - 1.0) * 100);
-    const combinedRate = rateDelta === 0 ? cfg.rate : `${rateDelta >= 0 ? "+" : ""}${rateDelta}%`;
-
-    for (let attempt = 0; attempt < 2; attempt++) {
-      let tts = null;
-      try {
-        tts = await getOrCreateEdgeTtsInstance(cfg.edgeVoice);
-        tts._busy = true;
-        const result = await new Promise((resolve, reject) => {
-          const chunks = [];
-          const timer = setTimeout(() => {
-            tts._busy = false;
-            if (edgeVoiceInstancePool.get(cfg.edgeVoice) === tts) {
-              edgeVoiceInstancePool.delete(cfg.edgeVoice);
-            }
-            reject(new Error("Edge TTS stream timeout"));
-          }, 3200);
-
-          const { audioStream } = tts.toStream(text, {
-            rate: combinedRate,
-            pitch: cfg.pitch
-          });
-
-          audioStream.on("data", (chunk) => {
-            chunks.push(chunk);
-          });
-          audioStream.on("end", () => {
-            clearTimeout(timer);
-            tts._busy = false;
-            resolve({
-              buffer: Buffer.concat(chunks),
-              edgeVoice: cfg.edgeVoice
-            });
-          });
-          audioStream.on("error", (err) => {
-            clearTimeout(timer);
-            tts._busy = false;
-            if (edgeVoiceInstancePool.get(cfg.edgeVoice) === tts) {
-              edgeVoiceInstancePool.delete(cfg.edgeVoice);
-            }
-            reject(err);
-          });
-        });
-
-        if (result.buffer && result.buffer.length > 100) {
-          const finalResult = {
-            buffer: result.buffer,
-            edgeVoice: cfg.edgeVoice
-          };
-          if (ttsAudioCache.size > 120) {
-            const firstKey = ttsAudioCache.keys().next().value;
-            ttsAudioCache.delete(firstKey);
-          }
-          ttsAudioCache.set(cacheKey, finalResult);
-          return finalResult;
+    // 1. Try real high-definition Edge Neural Voice via Python edge-tts 7.3.1
+    try {
+      const pyBuffer = await synthesizeWithPythonEdgeTts(text, cfg.edgeVoice, speedNumeric);
+      if (pyBuffer && pyBuffer.length > 200) {
+        const finalResult = {
+          buffer: pyBuffer,
+          edgeVoice: cfg.edgeVoice
+        };
+        if (ttsAudioCache.size > 120) {
+          const firstKey = ttsAudioCache.keys().next().value;
+          ttsAudioCache.delete(firstKey);
         }
-      } catch (edgeErr) {
-        if (tts) tts._busy = false;
-        if (edgeVoiceInstancePool.get(cfg.edgeVoice) === tts) {
-          edgeVoiceInstancePool.delete(cfg.edgeVoice);
-        }
+        ttsAudioCache.set(cacheKey, finalResult);
+        return finalResult;
       }
-    }
+    } catch (e) {}
 
+    // 2. Fast regional fallback if Python edge-tts is unavailable
     return synthesizeGoogleRegionalFallbackTTS(text, cfg.fallbackTl || "en-US");
   })();
 
@@ -1892,6 +1900,7 @@ async function callRealCoachLLM(
   levelKey = "intermediate",
   speechRate = 1.0
 ) {
+  const modelMeta = MODEL_PERSONAS[modelId] || MODEL_PERSONAS["gemini-4-argon"];
   const levelProfile = LEVEL_PROFILES[levelKey] || LEVEL_PROFILES.intermediate;
   const histText = (history || [])
     .slice(-8)
@@ -1900,6 +1909,7 @@ async function callRealCoachLLM(
 
   const prompt = `DO NOT call any tools or read any files. Respond ONLY with a single raw JSON object (no markdown fences).
 You are ${partnerName}, a warm, empathetic, intelligent live English conversation partner in the "${scenarioTitle}" scenario (${rolePrompt}).
+${modelMeta.systemStyle || ""}
 ${levelProfile.promptRule}
 
 Recent conversation history:
@@ -2024,43 +2034,10 @@ Instructions:
         }
       });
 
-      // Race between early streaming reply (~1.8s) and full turn completion
-      const winner = await Promise.race([
-        earlyTurnPromise,
-        workerState.busyPromise.then((fullRes) => ({ early: false, fullRes }))
-      ]);
-
-      if (winner && winner.early && winner.reply) {
-        const directFix = localGrammar.corrected;
-        const casualNative = localGrammar.correctedVariants?.[1]?.sentence || directFix;
-        const fluentPolite = localGrammar.correctedVariants?.[2]?.sentence || directFix;
-        return {
-          reply: winner.reply,
-          follow_up_hint: winner.follow_up_hint || "That makes sense! Let me share a bit more.",
-          pending_coach_id: winner.turnId,
-          is_grammar_perfect: localGrammar.isPerfect,
-          corrected_sentence: directFix,
-          corrected_variants: localGrammar.correctedVariants,
-          grammar_explanation: localGrammar.explanation,
-          better_expressions: [
-            { tone: "Casual Native", phrase: casualNative },
-            { tone: "Fluent & Expressive", phrase: fluentPolite }
-          ],
-          pronunciation_tips: [
-            { word: "Connected Speech", tip: "Link consonant endings smoothly into the next vowel sound." },
-            { word: "Sentence Stress", tip: "Emphasize key nouns, main verbs, and emotional adjectives." }
-          ],
-          key_vocabulary: [
-            { word: "express yourself", meaning: "To communicate your thoughts and feelings clearly." },
-            { word: "build confidence", meaning: "To feel more sure and comfortable when speaking." }
-          ],
-          recommended_speech_rate: null
-        };
-      }
-
-      if (winner && !winner.early && winner.fullRes) {
-        const fullRes = winner.fullRes;
-        if (fullRes.reply && voicePersona) {
+      // Await full turn completion (~2.2s) to guarantee authoritative, accurate LLM grammar correction without fake initial marks
+      const fullRes = await workerState.busyPromise;
+      if (fullRes && fullRes.reply) {
+        if (voicePersona) {
           prewarmTtsMatchingClientSplit(
             fullRes.reply,
             voicePersona,

@@ -587,8 +587,20 @@ const MODEL_DEFAULT_VOICE_MAP = {
   "o3-mini": "openai:sage"
 };
 
+function normalizeVoicePersona(v) {
+  if (!v) return "gemini:Kore";
+  if (v.includes(":")) return v;
+  const lower = v.toLowerCase();
+  if (["coral", "ash", "sage", "nova", "alloy", "shimmer"].includes(lower)) {
+    return `openai:${lower}`;
+  }
+  const cap = lower.charAt(0).toUpperCase() + lower.slice(1);
+  return `gemini:${cap}`;
+}
+
 function getParsedVoicePersona() {
-  const parts = (state.voicePersona || "gemini:Kore").split(":");
+  const norm = normalizeVoicePersona(state.voicePersona);
+  const parts = norm.split(":");
   const rawName = parts[1] || "Kore";
   const voiceDisplayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
   return {
@@ -1994,6 +2006,89 @@ async function callZeroKeyBackendChatAPI(userMessage) {
   return data;
 }
 
+function calculateRealisticScores(userMessage, isPerfect, correctedSentence, levelKey) {
+  const origWords = (userMessage || "").trim().split(/\s+/).filter(Boolean);
+  const fixedWords = (correctedSentence || userMessage || "").trim().split(/\s+/).filter(Boolean);
+  const wordLen = origWords.length;
+
+  let diffCount = 0;
+  origWords.forEach((w, idx) => {
+    if (!fixedWords[idx] || w.toLowerCase() !== fixedWords[idx].toLowerCase()) {
+      diffCount++;
+    }
+  });
+  if (fixedWords.length > origWords.length) {
+    diffCount += (fixedWords.length - origWords.length);
+  }
+
+  // 1. Grammar Score (35 ~ 98) - Realistic evaluation matching errors
+  let grammar = 95;
+  if (!isPerfect) {
+    if (diffCount === 1) {
+      grammar = 74; // Minor typo or article mistake
+    } else if (diffCount === 2) {
+      grammar = 62; // 2 grammatical errors
+    } else if (diffCount >= 3) {
+      grammar = Math.max(35, 52 - (diffCount - 3) * 6); // Severe grammar break
+    } else {
+      grammar = 68;
+    }
+  } else {
+    grammar = Math.min(98, 92 + Math.min(wordLen, 5));
+  }
+
+  // 2. Fluency Score (40 ~ 98)
+  let fluency = 70;
+  if (wordLen <= 2) {
+    fluency = 48;
+  } else if (wordLen <= 4) {
+    fluency = 60;
+  } else if (wordLen <= 7) {
+    fluency = 72;
+  } else if (wordLen <= 12) {
+    fluency = isPerfect ? 88 : 76;
+  } else {
+    fluency = isPerfect ? 95 : 80;
+  }
+  if (!isPerfect && diffCount >= 2) {
+    fluency = Math.max(40, fluency - 14);
+  }
+
+  // 3. Vocabulary Richness (42 ~ 96)
+  let vocabulary = 65;
+  if (wordLen <= 2) {
+    vocabulary = 45;
+  } else if (wordLen <= 5) {
+    vocabulary = 58;
+  } else if (wordLen <= 10) {
+    vocabulary = 72;
+  } else {
+    vocabulary = Math.min(96, 78 + Math.min(wordLen, 12));
+  }
+  if (!isPerfect && diffCount >= 2) {
+    vocabulary = Math.max(42, vocabulary - 10);
+  }
+
+  // CEFR Level
+  let cefr = "B1";
+  if (grammar < 60 || wordLen <= 3) {
+    cefr = "A1";
+  } else if (grammar < 75 || wordLen <= 6) {
+    cefr = "A2";
+  } else if (grammar >= 85 && wordLen >= 12) {
+    cefr = levelKey === "advanced" ? "C1" : "B2";
+  } else {
+    cefr = "B1";
+  }
+
+  return {
+    grammar: Math.round(grammar),
+    fluency: Math.round(fluency),
+    vocabulary: Math.round(vocabulary),
+    cefr_level: cefr
+  };
+}
+
 /**
  * Direct client-side Zero-Key LLM fallback (runs on Cloudflare Pages / mobile where /api/chat is not hosted)
  * Powers full conversational AI responses without any backend Node server or API key!
@@ -2001,6 +2096,17 @@ async function callZeroKeyBackendChatAPI(userMessage) {
 async function callZeroKeyClientLLM(userMessage) {
   const scenario = SCENARIOS[state.scenario] || SCENARIOS.casual;
   const { voiceDisplayName } = getParsedVoicePersona();
+  const activeModel = getActiveModelString();
+  const clientModelStyles = {
+    "gemini-4-argon": "MODEL IDENTITY: Google Gemini 4 Argon. Your conversational style is thoughtful, warm, intellectually curious, and expressive. You share relatable thoughts, use vivid natural metaphors, and ask insightful questions that encourage the speaker to elaborate.",
+    "gemini-3.8-flash": "MODEL IDENTITY: Google Gemini 3.8 Flash. Your conversational style is energetic, lively, quick, and snappy. You use modern conversational spoken idioms and keep your responses upbeat, fast-paced, and punchy.",
+    "gemini-3.5-flash-lite": "MODEL IDENTITY: Google Gemini 3.5 Flash-Lite. Your style is concise, crisp, clear, and direct. You keep your responses short (1-2 sentences), structured, and easy to follow.",
+    "gpt-4o": "MODEL IDENTITY: OpenAI ChatGPT (GPT-4o). Your conversational style is polished, empathetic, engaging, and articulate. You validate the speaker's ideas with genuine curiosity, weave subtle nuance, and keep the interaction smoothly flowing.",
+    "gpt-4o-mini": "MODEL IDENTITY: OpenAI ChatGPT (GPT-4o Mini). Your style is friendly, practical, approachable, and encouraging. You give clear, actionable observations and prompt the speaker with accessible conversational topics.",
+    "o3-mini": "MODEL IDENTITY: OpenAI o3-mini. Your conversational style is precise, analytical, structured, and insightful. You focus on nuanced topic depth, vocabulary precision, and logical exploration."
+  };
+  const mStyle = clientModelStyles[activeModel] || clientModelStyles["gemini-4-argon"];
+
   const histText = (state.currentMessages || [])
     .slice(-8)
     .map((m) => `${m.role === "user" ? "User" : voiceDisplayName}: ${m.text}`)
@@ -2008,6 +2114,7 @@ async function callZeroKeyClientLLM(userMessage) {
 
   const prompt = `DO NOT call any tools or read any files. Respond ONLY with a single raw JSON object (no markdown fences).
 You are ${voiceDisplayName}, a warm, empathetic, intelligent live English conversation partner in the "${scenario.title}" scenario (${getDynamicRolePrompt(state.scenario)}).
+${mStyle}
 
 Recent conversation history:
 ${histText || "(Start of conversation)"}
@@ -2101,6 +2208,14 @@ async function handleSendUserMessage(overrideText = null) {
   state.isGenerating = true;
   dom.sendBtn.disabled = true;
   dom.sendBtn.innerHTML = "<span>Thinking...</span>";
+
+  // Immediate visual feedback in Grammar panel so user knows their new sentence is actively being evaluated
+  if (dom.lastUserUtterance) {
+    dom.lastUserUtterance.innerHTML = `<span style="opacity:0.8;">"${escapeHtml(text)}"</span>`;
+  }
+  if (dom.correctedSentence) {
+    dom.correctedSentence.innerHTML = `<div class="primary-fix-card" style="opacity:0.85;"><div class="primary-fix-top"><span class="primary-fix-badge">Analyzing...</span></div><div class="primary-fix-text"><em>AI coach is evaluating grammar and natural phrasing...</em></div></div>`;
+  }
 
   try {
     let result;
@@ -2211,7 +2326,7 @@ async function handleSendUserMessage(overrideText = null) {
     saveCurrentSessionToArchive(false);
 
     if (state.autoSpeak) {
-      await speakText(result.reply, state.speechRate);
+      speakText(result.reply, state.speechRate);
     }
     return result;
   } catch (err) {
@@ -2238,7 +2353,7 @@ async function handleSendUserMessage(overrideText = null) {
     });
     saveCurrentSessionToArchive(false);
     if (state.autoSpeak) {
-      await speakText(fallback.reply);
+      speakText(fallback.reply);
     }
     return fallback;
   } finally {
@@ -2377,12 +2492,13 @@ async function speakText(text, customRate = null) {
     try {
       const speakToken = (state.speakToken = (state.speakToken || 0) + 1);
       const cleanText = text.trim();
+      const normVoice = normalizeVoicePersona(state.voicePersona);
       const resp = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: cleanText,
-          voice: state.voicePersona,
+          voice: normVoice,
           rate
         })
       });
@@ -2419,21 +2535,22 @@ async function speakText(text, customRate = null) {
 
   // 4. Multi-Persona Browser SpeechSynthesis Fallback (distinct voice/pitch/accent per persona)
   if ("speechSynthesis" in window) {
+    const normVoice = normalizeVoicePersona(state.voicePersona);
     const utterance = new SpeechSynthesisUtterance(text);
     const personaFallbackProfiles = {
-      "gemini:Kore": { lang: "en-US", pitch: 1.08, rateMult: 1.0, genderHint: /zira|aria|jenny|samantha|google us/i },
-      "gemini:Puck": { lang: "en-US", pitch: 0.92, rateMult: 1.06, genderHint: /david|mark|guy|andrew|alex/i },
-      "gemini:Aoede": { lang: "en-GB", pitch: 1.12, rateMult: 0.98, genderHint: /hazel|sonia|libby|uk english female|serena/i },
-      "gemini:Charon": { lang: "en-GB", pitch: 0.82, rateMult: 0.95, genderHint: /george|ryan|uk english male|daniel/i },
-      "gemini:Fenrir": { lang: "en-US", pitch: 0.78, rateMult: 1.04, genderHint: /david|guy|mark|james/i },
+      "gemini:Kore": { lang: "en-US", pitch: 1.08, rateMult: 1.0, genderHint: /ava|jenny|zira|aria|samantha|google us/i },
+      "gemini:Puck": { lang: "en-US", pitch: 0.92, rateMult: 1.06, genderHint: /andrew|guy|david|mark|alex/i },
+      "gemini:Aoede": { lang: "en-GB", pitch: 1.12, rateMult: 0.98, genderHint: /sonia|libby|hazel|uk english female|serena/i },
+      "gemini:Charon": { lang: "en-GB", pitch: 0.82, rateMult: 0.95, genderHint: /ryan|george|uk english male|daniel/i },
+      "gemini:Fenrir": { lang: "en-US", pitch: 0.78, rateMult: 1.04, genderHint: /guy|david|mark|james/i },
       "openai:coral": { lang: "en-US", pitch: 1.15, rateMult: 1.03, genderHint: /jenny|aria|zira|samantha/i },
-      "openai:nova": { lang: "en-AU", pitch: 1.1, rateMult: 1.04, genderHint: /natasha|catherine|karen|zira/i },
+      "openai:nova": { lang: "en-AU", pitch: 1.1, rateMult: 1.04, genderHint: /natasha|catherine|karen|australian/i },
       "openai:alloy": { lang: "en-US", pitch: 1.0, rateMult: 1.0, genderHint: /aria|google us|zira/i },
-      "openai:sage": { lang: "en-GB", pitch: 0.86, rateMult: 0.96, genderHint: /george|thomas|ryan|uk english male/i },
-      "openai:ash": { lang: "en-US", pitch: 0.9, rateMult: 1.02, genderHint: /mark|david|brian|guy/i },
+      "openai:sage": { lang: "en-GB", pitch: 0.86, rateMult: 0.96, genderHint: /thomas|george|ryan|uk english male/i },
+      "openai:ash": { lang: "en-US", pitch: 0.9, rateMult: 1.02, genderHint: /brian|mark|david|guy/i },
       "openai:shimmer": { lang: "en-US", pitch: 1.2, rateMult: 0.97, genderHint: /emma|zira|samantha/i }
     };
-    const profile = personaFallbackProfiles[state.voicePersona] || personaFallbackProfiles["gemini:Kore"];
+    const profile = personaFallbackProfiles[normVoice] || personaFallbackProfiles["gemini:Kore"];
     utterance.lang = profile.lang;
     utterance.pitch = profile.pitch;
     utterance.rate = Math.min(1.5, Math.max(0.7, rate * profile.rateMult));
@@ -3071,6 +3188,9 @@ function bindEvents() {
     if (MODEL_DEFAULT_VOICE_MAP[mod]) {
       state.voicePersona = MODEL_DEFAULT_VOICE_MAP[mod];
       localStorage.setItem("speakflow_voice_persona", state.voicePersona);
+      if (dom.quickVoicePersonaSelect) {
+        dom.quickVoicePersonaSelect.value = state.voicePersona;
+      }
     }
     localStorage.setItem("speakflow_ai_provider", prov);
     syncSettingsUI();
@@ -3093,9 +3213,7 @@ function bindEvents() {
       syncSettingsUI();
       const { voiceDisplayName } = getParsedVoicePersona();
       showToast(`AI Voice: ${voiceDisplayName}`);
-      if (state.autoSpeak) {
-        speakText(`Hello! I'm ${voiceDisplayName}. Great to speak with you.`);
-      }
+      speakText(`Hello! I'm ${voiceDisplayName}. Great to speak with you.`);
     });
   }
 
