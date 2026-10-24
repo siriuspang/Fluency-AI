@@ -38,36 +38,24 @@ const NEURAL_VOICE_MAP = {
   "openai:sage": { edgeVoice: "en-GB-ThomasNeural", pitch: "-2Hz", rate: "+0%", fallbackTl: "en-GB" },
   "openai:ash": { edgeVoice: "en-US-BrianMultilingualNeural", pitch: "-2Hz", rate: "+3%", fallbackTl: "en-IE" },
   "openai:shimmer": { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" },
-  // Short-name & case-insensitive fallbacks
+  // Short-name fallbacks
   Kore: { edgeVoice: "en-US-AvaMultilingualNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-US" },
-  kore: { edgeVoice: "en-US-AvaMultilingualNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-US" },
   Puck: { edgeVoice: "en-US-AndrewMultilingualNeural", pitch: "+2Hz", rate: "+7%", fallbackTl: "en-CA" },
-  puck: { edgeVoice: "en-US-AndrewMultilingualNeural", pitch: "+2Hz", rate: "+7%", fallbackTl: "en-CA" },
   Aoede: { edgeVoice: "en-GB-SoniaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-GB" },
-  aoede: { edgeVoice: "en-GB-SoniaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-GB" },
   Charon: { edgeVoice: "en-GB-RyanNeural", pitch: "-3Hz", rate: "+0%", fallbackTl: "en-IE" },
-  charon: { edgeVoice: "en-GB-RyanNeural", pitch: "-3Hz", rate: "+0%", fallbackTl: "en-IE" },
   Fenrir: { edgeVoice: "en-US-GuyNeural", pitch: "-4Hz", rate: "+4%", fallbackTl: "en-AU" },
-  fenrir: { edgeVoice: "en-US-GuyNeural", pitch: "-4Hz", rate: "+4%", fallbackTl: "en-AU" },
   coral: { edgeVoice: "en-US-JennyNeural", pitch: "+3Hz", rate: "+4%", fallbackTl: "en-US" },
-  Coral: { edgeVoice: "en-US-JennyNeural", pitch: "+3Hz", rate: "+4%", fallbackTl: "en-US" },
   nova: { edgeVoice: "en-AU-NatashaNeural", pitch: "+1Hz", rate: "+5%", fallbackTl: "en-AU" },
-  Nova: { edgeVoice: "en-AU-NatashaNeural", pitch: "+1Hz", rate: "+5%", fallbackTl: "en-AU" },
   alloy: { edgeVoice: "en-US-AriaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-CA" },
-  Alloy: { edgeVoice: "en-US-AriaNeural", pitch: "+0Hz", rate: "+2%", fallbackTl: "en-CA" },
   sage: { edgeVoice: "en-GB-ThomasNeural", pitch: "-2Hz", rate: "+0%", fallbackTl: "en-GB" },
-  Sage: { edgeVoice: "en-GB-ThomasNeural", pitch: "-2Hz", rate: "+0%", fallbackTl: "en-GB" },
   ash: { edgeVoice: "en-US-BrianMultilingualNeural", pitch: "-2Hz", rate: "+3%", fallbackTl: "en-IE" },
-  Ash: { edgeVoice: "en-US-BrianMultilingualNeural", pitch: "-2Hz", rate: "+3%", fallbackTl: "en-IE" },
-  shimmer: { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" },
-  Shimmer: { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" }
+  shimmer: { edgeVoice: "en-US-EmmaMultilingualNeural", pitch: "+4Hz", rate: "+0%", fallbackTl: "en-IN" }
 };
 
 const MODEL_PERSONAS = {
   "gemini-4-argon": {
     displayName: "Gemini 4 Argon",
     defaultVoiceName: "Kore",
-    systemStyle: "MODEL IDENTITY: Google Gemini 4 Argon. Your conversational style is thoughtful, warm, intellectually curious, and expressive. You share relatable thoughts, use vivid natural metaphors, and ask insightful questions that encourage the speaker to elaborate.",
     selfIntro: (roleName, scenarioTitle) =>
       `Hi there! I'm ${roleName}, your English speaking partner. What topic would you love to talk about together today?`,
     greetingReply: (roleName) =>
@@ -78,7 +66,6 @@ const MODEL_PERSONAS = {
   "gemini-3.8-flash": {
     displayName: "Gemini 3.8 Flash",
     defaultVoiceName: "Puck",
-    systemStyle: "MODEL IDENTITY: Google Gemini 3.8 Flash. Your conversational style is energetic, lively, quick, and snappy. You use modern conversational spoken idioms and keep your responses upbeat, fast-paced, and punchy.",
     selfIntro: (roleName, scenarioTitle) =>
       `Hey! I'm ${roleName}, your English conversation partner. What's something fun or interesting you've been up to this week?`,
     greetingReply: (roleName) =>
@@ -89,7 +76,6 @@ const MODEL_PERSONAS = {
   "gemini-3.5-flash-lite": {
     displayName: "Gemini 3.5 Flash-Lite",
     defaultVoiceName: "Aoede",
-    systemStyle: "MODEL IDENTITY: Google Gemini 3.5 Flash-Lite. Your style is concise, crisp, clear, and direct. You keep your responses short (1-2 sentences), structured, and easy to follow.",
     selfIntro: (roleName, scenarioTitle) =>
       `Lovely to meet you! I'm ${roleName}, your English speaking partner. Shall we start with a quick chat about your day?`,
     greetingReply: (roleName) =>
@@ -100,7 +86,6 @@ const MODEL_PERSONAS = {
   "gpt-4o": {
     displayName: "ChatGPT (GPT-4o)",
     defaultVoiceName: "Coral",
-    systemStyle: "MODEL IDENTITY: OpenAI ChatGPT (GPT-4o). Your conversational style is polished, empathetic, naturally conversational, and engaging. You respond with genuine human warmth and conversational storytelling.",
     selfIntro: (roleName, scenarioTitle) =>
       `It's so nice to meet you! I'm ${roleName}, your English conversation partner. Tell me, what inspired you to practice English today?`,
     greetingReply: (roleName) =>
@@ -111,7 +96,6 @@ const MODEL_PERSONAS = {
   "gpt-4o-mini": {
     displayName: "ChatGPT (GPT-4o Mini)",
     defaultVoiceName: "Ash",
-    systemStyle: "MODEL IDENTITY: OpenAI ChatGPT (GPT-4o Mini). Your style is friendly, casual, everyday conversational, supportive, and relaxed, making everyday English practice feel like talking to a close friend.",
     selfIntro: (roleName, scenarioTitle) =>
       `Hey there, nice to meet you! I'm ${roleName}, your English speaking partner. What's one topic you enjoy talking about in English?`,
     greetingReply: (roleName) =>
@@ -122,7 +106,6 @@ const MODEL_PERSONAS = {
   "o3-mini": {
     displayName: "ChatGPT (o3-mini)",
     defaultVoiceName: "Sage",
-    systemStyle: "MODEL IDENTITY: OpenAI ChatGPT (o3-mini). Your style is articulate, precise, and thoughtful, focusing on lexical accuracy, rich vocabulary choices, and nuanced phrasing.",
     selfIntro: (roleName, scenarioTitle) =>
       `Good day! I'm ${roleName}, your English speaking coach. Which topic or speaking goal would you like to focus on first today?`,
     greetingReply: (roleName) =>
@@ -221,43 +204,6 @@ async function getOrCreateEdgeTtsInstance(edgeVoice) {
   return tts;
 }
 
-function synthesizeWithPythonEdgeTts(text, edgeVoice, speedNumeric = 1.0) {
-  return new Promise((resolve) => {
-    const tmpFile = path.join(os.tmpdir(), `tts_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp3`);
-    const rateDelta = Math.round((Number(speedNumeric || 1.0) - 1.0) * 100);
-    const rateArg = `${rateDelta >= 0 ? "+" : ""}${rateDelta}%`;
-    const child = spawn("python", [
-      "-m", "edge_tts",
-      "--voice", edgeVoice,
-      "--text", text.slice(0, 450),
-      "--rate", rateArg,
-      "--write-media", tmpFile
-    ], { windowsHide: true });
-
-    const timer = setTimeout(() => {
-      try { child.kill(); } catch (e) {}
-      resolve(null);
-    }, 3800);
-
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (code === 0 && fs.existsSync(tmpFile)) {
-        try {
-          const buffer = fs.readFileSync(tmpFile);
-          fs.unlinkSync(tmpFile);
-          resolve(buffer);
-          return;
-        } catch (e) {}
-      }
-      resolve(null);
-    });
-    child.on("error", () => {
-      clearTimeout(timer);
-      resolve(null);
-    });
-  });
-}
-
 async function synthesizeEdgeNeuralTTS(text, voiceKey = "gemini:Kore", speedNumeric = 1.0) {
   const cfg = NEURAL_VOICE_MAP[voiceKey] || NEURAL_VOICE_MAP["gemini:Kore"];
   const cacheKey = `${voiceKey}::${speedNumeric}::${text}`;
@@ -269,24 +215,70 @@ async function synthesizeEdgeNeuralTTS(text, voiceKey = "gemini:Kore", speedNume
   }
 
   const runSynthesis = (async () => {
-    // 1. Try real high-definition Edge Neural Voice via Python edge-tts 7.3.1
-    try {
-      const pyBuffer = await synthesizeWithPythonEdgeTts(text, cfg.edgeVoice, speedNumeric);
-      if (pyBuffer && pyBuffer.length > 200) {
-        const finalResult = {
-          buffer: pyBuffer,
-          edgeVoice: cfg.edgeVoice
-        };
-        if (ttsAudioCache.size > 120) {
-          const firstKey = ttsAudioCache.keys().next().value;
-          ttsAudioCache.delete(firstKey);
-        }
-        ttsAudioCache.set(cacheKey, finalResult);
-        return finalResult;
-      }
-    } catch (e) {}
+    const rateDelta = Math.round((Number(speedNumeric || 1.0) - 1.0) * 100);
+    const combinedRate = rateDelta === 0 ? cfg.rate : `${rateDelta >= 0 ? "+" : ""}${rateDelta}%`;
 
-    // 2. Fast regional fallback if Python edge-tts is unavailable
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let tts = null;
+      try {
+        tts = await getOrCreateEdgeTtsInstance(cfg.edgeVoice);
+        tts._busy = true;
+        const result = await new Promise((resolve, reject) => {
+          const chunks = [];
+          const timer = setTimeout(() => {
+            tts._busy = false;
+            if (edgeVoiceInstancePool.get(cfg.edgeVoice) === tts) {
+              edgeVoiceInstancePool.delete(cfg.edgeVoice);
+            }
+            reject(new Error("Edge TTS stream timeout"));
+          }, 3200);
+
+          const { audioStream } = tts.toStream(text, {
+            rate: combinedRate,
+            pitch: cfg.pitch
+          });
+
+          audioStream.on("data", (chunk) => {
+            chunks.push(chunk);
+          });
+          audioStream.on("end", () => {
+            clearTimeout(timer);
+            tts._busy = false;
+            resolve({
+              buffer: Buffer.concat(chunks),
+              edgeVoice: cfg.edgeVoice
+            });
+          });
+          audioStream.on("error", (err) => {
+            clearTimeout(timer);
+            tts._busy = false;
+            if (edgeVoiceInstancePool.get(cfg.edgeVoice) === tts) {
+              edgeVoiceInstancePool.delete(cfg.edgeVoice);
+            }
+            reject(err);
+          });
+        });
+
+        if (result.buffer && result.buffer.length > 100) {
+          const finalResult = {
+            buffer: result.buffer,
+            edgeVoice: cfg.edgeVoice
+          };
+          if (ttsAudioCache.size > 120) {
+            const firstKey = ttsAudioCache.keys().next().value;
+            ttsAudioCache.delete(firstKey);
+          }
+          ttsAudioCache.set(cacheKey, finalResult);
+          return finalResult;
+        }
+      } catch (edgeErr) {
+        if (tts) tts._busy = false;
+        if (edgeVoiceInstancePool.get(cfg.edgeVoice) === tts) {
+          edgeVoiceInstancePool.delete(cfg.edgeVoice);
+        }
+      }
+    }
+
     return synthesizeGoogleRegionalFallbackTTS(text, cfg.fallbackTl || "en-US");
   })();
 
@@ -402,32 +394,6 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
   let corrected = rawOriginal;
   const notes = [];
   let isPerfect = true;
-
-  // 0. Keyboard slip & text abbreviation fixes (e.g. "y jd= know" -> "I don't know")
-  if (/\b(?:y|i)\s+(?:jd=|dnt|dn't|dont|dno)\s+know\b/i.test(corrected) || /\bjd=\b/i.test(corrected)) {
-    corrected = corrected.replace(/\b(?:y|i)?\s*(?:jd=|dnt|dn't|dont|dno)\s+know\b/gi, "I don't know");
-    corrected = corrected.replace(/\bjd=\b/gi, "don't");
-    isPerfect = false;
-    notes.push(`Typo & keyboard slip fix: "y jd= know" is a typo for "I don't know".`);
-  } else if (/\bidk\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bidk\b/gi, "I don't know");
-    isPerfect = false;
-    notes.push(`Abbreviation fix: "idk" stands for "I don't know".`);
-  }
-
-  // Single letter words that are invalid in English (only 'I' and 'a' are valid)
-  if (/\by\s+(?:know|think|see|want|like|need|can|will|have|feel|am)\b/i.test(corrected)) {
-    corrected = corrected.replace(/\by\s+(know|think|see|want|like|need|can|will|have|feel|am)\b/gi, "I $1");
-    isPerfect = false;
-    notes.push(`Typo fix: use the capital pronoun "I" instead of "y".`);
-  }
-
-  // Accidental non-alphabetic symbol cleanup
-  if (/[=_+~^%$#@\\/]/.test(corrected)) {
-    isPerfect = false;
-    corrected = corrected.replace(/[=_+~^%$#@\\/]+/g, " ").replace(/\s{2,}/g, " ").trim();
-    notes.push("Typo fix: removed accidental keyboard symbols.");
-  }
 
   // 1. Common spelling fixes (applied first so downstream rules see clean spelling)
   const spellingMap = [
@@ -694,129 +660,9 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
   // 16. Broad ESL Grammar & Collocation Rules
   const eslPatterns = [
     {
-      regex: /\bby\s+walk\b/gi,
-      replace: "on foot",
-      note: `Say "on foot" (or "walk") instead of "by walk".`
-    },
-    {
-      regex: /\bevery\s+days\b/gi,
-      replace: "every day",
-      note: `"Every day" takes the singular form "day".`
-    },
-    {
-      regex: /\blook\s+forward\s+to\s+(see|meet|hear|talk)\b/gi,
-      replace: (_, v) => `look forward to ${v}ing`,
-      note: `"Look forward to" is followed by a gerund (-ing form).`
-    },
-    {
-      regex: /\bmarry\s+with\b/gi,
-      replace: "marry",
-      note: `"Marry" takes a direct object without "with" ("marry someone").`
-    },
-    {
-      regex: /\bgraduate\s+(high school|college|university)\b/gi,
-      replace: "graduate from $1",
-      note: `Use "graduate from" when naming an institution.`
-    },
-    {
-      regex: /\barrive\s+to\b/gi,
-      replace: "arrive at",
-      note: `Use "arrive at" (or "arrive in") instead of "arrive to".`
-    },
-    {
-      regex: /\binterested\s+(?:for|about)\b/gi,
-      replace: "interested in",
-      note: `Use the preposition "in" with "interested" ("interested in").`
-    },
-    {
-      regex: /\bin\s+the\s+weekend\b/gi,
-      replace: "on the weekend",
-      note: `In English, use "on the weekend" or "at the weekend".`
-    },
-    {
-      regex: /\b(on|in)\s+yesterday\b/gi,
-      replace: "yesterday",
-      note: `Drop "on/in" before "yesterday".`
-    },
-    {
-      regex: /\b(on|in)\s+tomorrow\b/gi,
-      replace: "tomorrow",
-      note: `Drop "on/in" before "tomorrow".`
-    },
-    {
       regex: /\bi am agree\b/gi,
       replace: "I completely agree",
       note: `"Agree" is an action verb, not an adjective—say "I agree" rather than "I am agree".`
-    },
-    {
-      regex: /\bbuyed\b/gi,
-      replace: "bought",
-      note: `"Buy" has an irregular past tense: "bought" (not "buyed").`
-    },
-    {
-      regex: /\beated\b/gi,
-      replace: "ate",
-      note: `"Eat" has an irregular past tense: "ate" (not "eated").`
-    },
-    {
-      regex: /\bgoed\b/gi,
-      replace: "went",
-      note: `"Go" has an irregular past tense: "went" (not "goed").`
-    },
-    {
-      regex: /\bsleeped\b/gi,
-      replace: "slept",
-      note: `"Sleep" has an irregular past tense: "slept" (not "sleeped").`
-    },
-    {
-      regex: /\bdrinked\b/gi,
-      replace: "drank",
-      note: `"Drink" has an irregular past tense: "drank" (not "drinked").`
-    },
-    {
-      regex: /\bfeeled\b/gi,
-      replace: "felt",
-      note: `"Feel" has an irregular past tense: "felt" (not "feeled").`
-    },
-    {
-      regex: /\bteached\b/gi,
-      replace: "taught",
-      note: `"Teach" has an irregular past tense: "taught" (not "teached").`
-    },
-    {
-      regex: /\bcatched\b/gi,
-      replace: "caught",
-      note: `"Catch" has an irregular past tense: "caught" (not "catched").`
-    },
-    {
-      regex: /\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/gi,
-      replace: "$1 I went",
-      note: `In the past context ("$1"), use the past tense "went" instead of "go".`
-    },
-    {
-      regex: /\bi\s+go\s+(?:to\s+(?:the\s+)?)?market\s+yesterday\b/gi,
-      replace: "I went to the market yesterday",
-      note: `Use the past tense "went" with the article "the" ("went to the market yesterday").`
-    },
-    {
-      regex: /\b(he|she|it|this|that)\s+don'?t\b/gi,
-      replace: "$1 doesn't",
-      note: `Third-person singular subjects take "doesn't" instead of "don't".`
-    },
-    {
-      regex: /\b(he|she|it|this|that)\s+have\b/gi,
-      replace: "$1 has",
-      note: `Third-person singular subjects take "has" instead of "have".`
-    },
-    {
-      regex: /\b(two|three|four|five|several|many|a couple of)\s+apple\b/gi,
-      replace: "$1 apples",
-      note: `Plural numbers and quantifiers take the plural noun "apples".`
-    },
-    {
-      regex: /\ba\s+(apple|orange|egg|elephant|umbrella|hour|idea)\b/gi,
-      replace: "an $1",
-      note: `Use the article "an" before words starting with a vowel sound.`
     },
     {
       regex: /\bdiscuss about\b/gi,
@@ -872,66 +718,6 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
       regex: /\bcan you speak slowly\b/gi,
       replace: "Could you speak a little more slowly, please",
       note: `When asking someone to slow down from their current pace, use the comparative adverb "more slowly" ("Could you speak a little more slowly?").`
-    },
-    {
-      regex: /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+shoe\b/gi,
-      replace: "$1 shoes",
-      note: `Plural count requires "shoes" (or "pairs of shoes").`
-    },
-    {
-      regex: /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(car|book|dog|cat|friend|year|day|month)\b/gi,
-      replace: "$1 $2s",
-      note: `Plural count requires a plural noun.`
-    },
-    {
-      regex: /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+person\b/gi,
-      replace: "$1 people",
-      note: `Use "people" for the plural of "person".`
-    },
-    {
-      regex: /\bone\s+of\s+my\s+(friend|colleague|coworker|student|teacher|family)\b/gi,
-      replace: "one of my $1s",
-      note: `"One of my..." requires a plural noun (e.g. "one of my friends").`
-    },
-    {
-      regex: /\b(they|we|you)\s+was\b/gi,
-      replace: "$1 were",
-      note: `Plural subjects take the past-tense verb "were".`
-    },
-    {
-      regex: /\bpeople\s+(?:is|was)\b/gi,
-      replace: (m) => (m.toLowerCase().includes("was") ? "people were" : "people are"),
-      note: `"People" is a plural noun and takes "are" or "were".`
-    },
-    {
-      regex: /\bit\s+very\s+(important|good|bad|nice|cold|hot|hard|difficult|easy|secret|cheap|expensive)\b/gi,
-      replace: "it is very $1",
-      note: `Add the linking verb "is" before adjectives ("it is very...").`
-    },
-    {
-      regex: /\b(he|she)\s+very\s+(kind|nice|smart|pretty|busy|tired)\b/gi,
-      replace: "$1 is very $2",
-      note: `Add the linking verb "is" before adjectives.`
-    },
-    {
-      regex: /\bi\s+very\s+(happy|sad|tired|busy|excited|glad)\b/gi,
-      replace: "I am very $1",
-      note: `Say "I am very..." rather than "I very...".`
-    },
-    {
-      regex: /\bwho\s+you\s+are\b/gi,
-      replace: "who are you",
-      note: `In direct questions, invert subject and verb: "Who are you?".`
-    },
-    {
-      regex: /\bwhat\s+you\s+mean\b/gi,
-      replace: "what do you mean",
-      note: `In questions, use auxiliary "do": "What do you mean?".`
-    },
-    {
-      regex: /\bmore\s+(easier|faster|cheaper|bigger|slower)\b/gi,
-      replace: "much $1",
-      note: `Double comparatives are incorrect; use "much $1".`
     }
   ];
 
@@ -956,25 +742,6 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
       corrected
     );
     corrected += isQ ? "?" : ".";
-  }
-
-  // Validity check on individual tokens (detect non-English gibberish / key mash / invalid letters)
-  const tokens = corrected.trim().split(/\s+/).filter(Boolean);
-  const hasInvalidToken = tokens.some((w) => {
-    const cleanWord = w.toLowerCase().replace(/^[^\w]+|[^\w]+$/g, "");
-    if (!cleanWord) return false;
-    // Word with no vowels (and not legitimate short abbreviations)
-    if (cleanWord.length > 2 && !/[aeiouy]/i.test(cleanWord)) return true;
-    // Word with non-letter characters in middle (e.g. jd=)
-    if (/[^a-zA-Z\'-]/.test(cleanWord)) return true;
-    // Single letter other than 'i' or 'a'
-    if (cleanWord.length === 1 && cleanWord !== "i" && cleanWord !== "a") return true;
-    return false;
-  });
-
-  if (hasInvalidToken) {
-    isPerfect = false;
-    notes.push("Please check your spelling; some characters or words do not appear to be standard English.");
   }
 
   // 17. Coaching Tip When User's Original Sentence Has No Hard Grammar Errors
@@ -1026,15 +793,6 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
  */
 function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
   const lower = rawOriginal.trim().toLowerCase();
-
-  // 0. Uncertainty / Don't know / idk / keyboard slips
-  if (/\b(?:i\s+)?don'?t\s+know\b/i.test(lower) || /\b(?:y|i)\s+jd=\s*know\b/i.test(lower) || /\bidk\b/i.test(lower) || /\bjd=\b/i.test(lower)) {
-    return [
-      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: "I don't know." },
-      { label: "추천 1 · Casual Native", sentence: "I'm not really sure, to be honest." },
-      { label: "추천 2 · Fluent & Expressive", sentence: "I don't have much information about that right now." }
-    ];
-  }
 
   // 1. Building tool with AGY / impressive
   if (/impressive.*agy|made it with agy|built it with agy/i.test(lower)) {
@@ -1143,15 +901,6 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
   const coreLowerFirst = core.length > 1 ? core.charAt(0).toLowerCase() + core.slice(1) : core.toLowerCase();
   const isQuestion = /\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
 
-  const words = core.split(/\s+/).filter(Boolean);
-  if (words.length <= 2) {
-    return [
-      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: "Could you tell me a little more about that?" },
-      { label: "추천 2 · Fluent & Expressive", sentence: "I'd love to hear more details when you have a moment." }
-    ];
-  }
-
   if (isQuestion) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
@@ -1202,36 +951,6 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
   let pronunciationTips = [];
   let keyVocabulary = [];
   let recommendedSpeechRate = null;
-
-  // 0a. UNCERTAINTY / "I don't know" / "idk" / "y jd= know"
-  if (
-    /\b(?:i\s+)?don'?t\s+know\b/i.test(lower) ||
-    /\b(?:y|i)\s+jd=\s*know\b/i.test(lower) ||
-    /\bidk\b/i.test(lower) ||
-    /\bjd=\b/i.test(lower) ||
-    /\bnot\s+sure\b/i.test(lower)
-  ) {
-    reply = pickFreshReply([
-      "No worries at all! There is no wrong answer here. What is one simple thought or question that comes to mind?",
-      "That is completely fine! We can take our time. Would you like to share a little thought, or should we try a different topic?",
-      "No problem! Take all the time you need. What are you most curious about right now?"
-    ]);
-    followUpHint = "I'm not completely sure yet, but I'd like to hear what you think about it.";
-    betterExpressions = [
-      { tone: "Direct Fix", phrase: "I don't know." },
-      { tone: "Casual Native", phrase: "I'm not really sure, to be honest." },
-      { tone: "Fluent & Expressive", phrase: "I don't have much information on that right now." }
-    ];
-    pronunciationTips = [
-      { word: "don't know (doʊn-noʊ)", tip: "In conversational English, native speakers often blend 'don't know' into 'dohn-noh' (/doʊn-noʊ/)." },
-      { word: "not sure (nɑt ʃʊr)", tip: "Make a clean, soft /ʃ/ ('sh') sound on 'sure', not an /s/ sound." }
-    ];
-    keyVocabulary = [
-      { word: "no worries", meaning: "A friendly way to say 'it's not a problem' or 'don't stress'." },
-      { word: "take your time", meaning: "To do something without rushing." }
-    ];
-    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
-  }
 
   // 0. VOICE SPEED, PACE & SIMPLICITY CONTROL ("Your speed is a little fast to me. Please slow down...", "Can you speak more slowly?")
   if (
@@ -1634,31 +1353,8 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
   }
 
-  // 14a. GROCERY / FARMERS MARKET / SHOPPING ("I went to the market yesterday and bought two apples")
-  if (/\b(market|grocery|supermarket|store|shop)\b/i.test(lower) && /\b(apple|apples|fruit|vegetable|vegetables|food|buy|bought|buyed|milk|bread|groceries|fresh|cook)\b/i.test(lower)) {
-    reply = pickFreshReply([
-      `Fresh fruit from the market is the best! Did you pick up sweet red apples, or were you in the mood for something tart like green apples?`,
-      `There's nothing quite like picking up fresh produce at the market! What else did you end up getting while you were there?`,
-      `Sounds like a nice trip to the market! Do you usually shop at local markets, or do you prefer bigger supermarkets?`
-    ]);
-    followUpHint = "I picked up two sweet red apples because they looked really fresh.";
-    betterExpressions = [
-      { tone: "Casual Native", phrase: "I went to the market yesterday and picked up a couple of apples." },
-      { tone: "Conversational", phrase: "Yesterday, I stopped by the local market to buy two apples." }
-    ];
-    pronunciationTips = [
-      { word: "Bought (/bɔːt/)", tip: "The 'gh' is silent—rhymes with 'caught' and 'thought'." },
-      { word: "Apples (/ˈæp.əlz/)", tip: "End with a voiced /z/ sound rather than an unvoiced /s/." }
-    ];
-    keyVocabulary = [
-      { word: "pick up", meaning: "To buy or gather something casually." },
-      { word: "local market", meaning: "A neighborhood market selling fresh food and produce." }
-    ];
-    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
-  }
-
   // 14. FINANCE / MARKETS / ECONOMY ("can we talk about the finance?")
-  if (/\b(finance|financial|economy|economic|stock market|financial market|fx market|market trends|stock|invest|investing|banking|asset|portfolio)\b/i.test(lower)) {
+  if (/\b(finance|financial|economy|economic|market|stock|invest|investing|banking|asset|portfolio)\b/i.test(lower)) {
     reply = `Finance is a fantastic topic for building advanced English vocabulary! Whether we're talking about FX markets, fintech innovation, or global macro trends, there's plenty to explore. Which part of finance do you follow most closely in your daily life or work?`;
     followUpHint = "I follow foreign exchange rates and fintech trends closely because they impact global business.";
     betterExpressions = [
@@ -1730,8 +1426,8 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
   // 17. DIRECT QUESTION FROM USER ("Can you...", "Do you...", "What...", "How...", "Why...")
   if (/\?$/.test(rawClean.trim()) || /^(can|could|would|do|does|did|are|is|what|why|how|where|when)\b/i.test(lower)) {
     reply = pickFreshReply([
-      `I'd be glad to help with that! As ${partnerName}, I'm always happy to adapt our conversation to whatever helps you most. What would feel most helpful for you to focus on right now?`,
-      `Absolutely—I'm right here with you! Tell me how you'd like to take the next step, and we'll practice together.`
+      `That's a great question! As ${partnerName}, I'm always happy to adapt our conversation to whatever helps you most. What would make our practice session feel most helpful for you right now?`,
+      `Absolutely—I'm right here with you! Tell me how you'd like to take the next step, and we'll do it together.`
     ]);
     followUpHint = "Let's keep practicing with short, natural everyday sentences.";
     betterExpressions = [
@@ -2012,8 +1708,8 @@ function callPollinationsFallbackLLM(promptText) {
   return new Promise((resolve) => {
     const bodyStr = JSON.stringify({
       model: "openai-fast",
-      temperature: 0.2,
-      max_tokens: 700,
+      reasoning_effort: "low",
+      temperature: 0.65,
       messages: [{ role: "user", content: promptText }]
     });
     const req = https.request(
@@ -2042,7 +1738,7 @@ function callPollinationsFallbackLLM(promptText) {
         });
       }
     );
-    req.setTimeout(3500, () => {
+    req.setTimeout(6500, () => {
       req.destroy();
       resolve("");
     });
@@ -2066,34 +1762,21 @@ function extractFirstJsonObject(rawStr) {
 }
 
 function formatFullCoachingPayload(parsed, userMessage, localGrammar, levelKey) {
-  let directFix = (parsed?.direct_fix || "").trim();
-  if (!directFix || /[=_+~^%$#@\\/]/.test(directFix) || (directFix.toLowerCase() === userMessage.toLowerCase() && !localGrammar.isPerfect)) {
-    if (!localGrammar.isPerfect && localGrammar.corrected) {
-      directFix = localGrammar.corrected;
-    } else if (!directFix) {
-      directFix = userMessage;
-    }
-  }
+  const directFix = (parsed?.direct_fix || localGrammar.corrected || userMessage).trim();
   const casualNative = (parsed?.casual_native || localGrammar.correctedVariants?.[1]?.sentence || directFix).trim();
   const fluentPolite = (parsed?.fluent_polite || localGrammar.correctedVariants?.[2]?.sentence || directFix).trim();
-
-  // Determine if grammar is truly perfect: if directFix differs from userMessage or has typos, it's NOT perfect!
-  const hasDiff = directFix.toLowerCase().replace(/[^\w\s]/g, "") !== userMessage.toLowerCase().replace(/[^\w\s]/g, "");
-  let isGrammarPerfect = false;
-  if (!hasDiff && localGrammar.isPerfect) {
-    isGrammarPerfect = typeof parsed?.is_grammar_perfect === "boolean" ? parsed.is_grammar_perfect : localGrammar.isPerfect;
-  }
 
   return {
     reply: adaptReplyToLevel((parsed?.reply || "").trim(), levelKey),
     follow_up_hint:
       parsed?.follow_up_hint || "That makes sense! Let me tell you a little more about what happened.",
-    is_grammar_perfect: isGrammarPerfect,
+    is_grammar_perfect:
+      typeof parsed?.is_grammar_perfect === "boolean" ? parsed.is_grammar_perfect : localGrammar.isPerfect,
     corrected_sentence: directFix,
     corrected_variants: [
-      { label: "Grammar Fix", sentence: directFix },
-      { label: "Alternative 1 · Casual Native", sentence: casualNative },
-      { label: "Alternative 2 · Fluent & Expressive", sentence: fluentPolite }
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: directFix },
+      { label: "추천 1 · Casual Native", sentence: casualNative },
+      { label: "추천 2 · Fluent & Expressive", sentence: fluentPolite }
     ],
     grammar_explanation: parsed?.grammar_explanation || localGrammar.explanation,
     better_expressions:
@@ -2133,7 +1816,6 @@ async function callRealCoachLLM(
   levelKey = "intermediate",
   speechRate = 1.0
 ) {
-  const modelMeta = MODEL_PERSONAS[modelId] || MODEL_PERSONAS["gemini-4-argon"];
   const levelProfile = LEVEL_PROFILES[levelKey] || LEVEL_PROFILES.intermediate;
   const histText = (history || [])
     .slice(-8)
@@ -2142,7 +1824,6 @@ async function callRealCoachLLM(
 
   const prompt = `DO NOT call any tools or read any files. Respond ONLY with a single raw JSON object (no markdown fences).
 You are ${partnerName}, a warm, empathetic, intelligent live English conversation partner in the "${scenarioTitle}" scenario (${rolePrompt}).
-${modelMeta.systemStyle || ""}
 ${levelProfile.promptRule}
 
 Recent conversation history:
@@ -2163,7 +1844,159 @@ Instructions:
 9. "key_vocabulary": Array of 2 concise objects [{"word":"phrase","meaning":"..."},{"word":"phrase2","meaning":"..."}].
 10. "recommended_speech_rate": 0.8 if the user asks to speak slower/simpler, 1.15 if faster, otherwise null.`;
 
-  // Authoritative real-time LLM coaching via fast zero-key neural pipeline (~3s response)
+  const workerState = await ensureWarmAgyWorker();
+  if (workerState && workerState.child && !workerState.child.killed) {
+    // Wait if previous turn's background coaching tail is still finishing (~0-500ms)
+    if (workerState.busyPromise) {
+      await workerState.busyPromise.catch(() => {});
+    }
+
+    if (workerState.child && !workerState.child.killed && !workerState.activeResolver) {
+      const turnId = `coach_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      let resolveCoachMap;
+      const coachDonePromise = new Promise((r) => {
+        resolveCoachMap = r;
+      });
+      pendingCoachMap.set(turnId, coachDonePromise);
+      setTimeout(() => pendingCoachMap.delete(turnId), 30000);
+
+      let resolveEarlyTurn;
+      const earlyTurnPromise = new Promise((r) => {
+        resolveEarlyTurn = r;
+      });
+
+      const fullTurnPromise = new Promise((resolveFull) => {
+        const timer = setTimeout(() => {
+          if (workerState.activeResolver) {
+            workerState.activeResolver = null;
+            resolveFull("");
+          }
+        }, 9500);
+
+        let inFlightFirstSentenceTts = null;
+
+        workerState.activeResolver = {
+          onFirstSentence: (firstSentText) => {
+            // First sentence streaming hook
+          },
+          onEarlyReply: (earlyReplyText) => {
+            const adaptedEarlyReply = adaptReplyToLevel(earlyReplyText, levelKey, partnerName);
+            if (adaptedEarlyReply && voicePersona) {
+              prewarmTtsMatchingClientSplit(adaptedEarlyReply, voicePersona, speechRate).catch(() => {});
+            }
+            resolveEarlyTurn({
+              early: true,
+              turnId,
+              reply: adaptedEarlyReply,
+              follow_up_hint: "That makes sense! Let me share a little more about that."
+            });
+          },
+          resolve: (text) => {
+            clearTimeout(timer);
+            resolveFull(text);
+          }
+        };
+
+        workerState.child.stdin.write(
+          JSON.stringify({
+            event: "user",
+            message: { role: "user", content: prompt }
+          }) + "\n"
+        );
+      });
+
+      // Track full turn completion in background so `pendingCoachMap` resolves AND worker rotation happens cleanly
+      workerState.busyPromise = fullTurnPromise.then(async (rawResponse) => {
+        workerState.busyPromise = null;
+        workerState.turnCount++;
+
+        if (workerState.turnCount === 4 && !agyStandbyPromise) {
+          agyStandbyPromise = createAgyWorkerState().catch(() => null);
+        }
+        if (workerState.turnCount >= 6) {
+          const oldChild = workerState.child;
+          if (agyStandbyPromise) {
+            agyStandbyPromise.then((standby) => {
+              if (standby && standby.child && !standby.child.killed) {
+                agyWorkerState = standby;
+              } else {
+                agyWorkerState = null;
+                ensureWarmAgyWorker().catch(() => {});
+              }
+              agyStandbyPromise = null;
+              try {
+                oldChild.kill();
+              } catch (e) {}
+            });
+          } else {
+            try {
+              oldChild.kill();
+            } catch (e) {}
+            agyWorkerState = null;
+            setTimeout(() => ensureWarmAgyWorker().catch(() => {}), 50);
+          }
+        }
+
+        const parsed = extractFirstJsonObject(rawResponse);
+        if (parsed && parsed.reply) {
+          const fullFormatted = formatFullCoachingPayload(parsed, userMessage, localGrammar, levelKey);
+          resolveCoachMap(fullFormatted);
+          return fullFormatted;
+        } else {
+          resolveCoachMap(null);
+          return null;
+        }
+      });
+
+      // Race between early streaming reply (~1.8s) and full turn completion
+      const winner = await Promise.race([
+        earlyTurnPromise,
+        workerState.busyPromise.then((fullRes) => ({ early: false, fullRes }))
+      ]);
+
+      if (winner && winner.early && winner.reply) {
+        const directFix = localGrammar.corrected;
+        const casualNative = localGrammar.correctedVariants?.[1]?.sentence || directFix;
+        const fluentPolite = localGrammar.correctedVariants?.[2]?.sentence || directFix;
+        return {
+          reply: winner.reply,
+          follow_up_hint: winner.follow_up_hint || "That makes sense! Let me share a bit more.",
+          pending_coach_id: winner.turnId,
+          is_grammar_perfect: localGrammar.isPerfect,
+          corrected_sentence: directFix,
+          corrected_variants: localGrammar.correctedVariants,
+          grammar_explanation: localGrammar.explanation,
+          better_expressions: [
+            { tone: "Casual Native", phrase: casualNative },
+            { tone: "Fluent & Expressive", phrase: fluentPolite }
+          ],
+          pronunciation_tips: [
+            { word: "Connected Speech", tip: "Link consonant endings smoothly into the next vowel sound." },
+            { word: "Sentence Stress", tip: "Emphasize key nouns, main verbs, and emotional adjectives." }
+          ],
+          key_vocabulary: [
+            { word: "express yourself", meaning: "To communicate your thoughts and feelings clearly." },
+            { word: "build confidence", meaning: "To feel more sure and comfortable when speaking." }
+          ],
+          recommended_speech_rate: null
+        };
+      }
+
+      if (winner && !winner.early && winner.fullRes) {
+        const fullRes = winner.fullRes;
+        if (fullRes.reply && voicePersona) {
+          prewarmTtsMatchingClientSplit(
+            fullRes.reply,
+            voicePersona,
+            fullRes.recommended_speech_rate || speechRate
+          ).catch(() => {});
+        }
+        return fullRes;
+      }
+    }
+  }
+
+  // Fallback to Pollinations LLM if worker unavailable
   const fallbackRaw = await callPollinationsFallbackLLM(prompt);
   const parsed = extractFirstJsonObject(fallbackRaw);
   if (!parsed || !parsed.reply) {
@@ -2283,35 +2116,40 @@ async function buildCoachingResponse(
 
   const grammarResult = analyzeGrammarAndPhrasing(userMessage, modelMeta);
 
-  // Authoritative Real Coach LLM for all dialogue turns to guarantee 100% accurate grammar correction,
-  // red-strikethrough error detection, and native English upgrades on ANY sentence!
-  const llmResult = await callRealCoachLLM(
-    userMessage,
-    modelId,
-    scenarioTitle,
-    rolePrompt,
-    partnerName,
-    voicePersona,
-    history,
-    grammarResult,
-    levelKey,
-    speechRate
-  );
-  if (llmResult) {
-    const realisticScores = calculateRealisticScores(
+  // Instant fast-path ONLY for short 1-6 word self-intro or pure "hi/hello" greetings
+  const isShortSelfIntro =
+    wordLen <= 6 && /^(hi|hello|hey)?[,.\s]*(there)?[,.\s]*(who are you|what is your name|what's your name)[.!?]*$/i.test(lower);
+  const isPureGreeting =
+    wordLen <= 3 && /^(hi|hello|hey|good morning|good afternoon|good evening|hi there|hello there)[.!?]*$/i.test(lower);
+
+  if (!isShortSelfIntro && !isPureGreeting) {
+    const llmResult = await callRealCoachLLM(
       userMessage,
-      llmResult.is_grammar_perfect,
-      llmResult.corrected_sentence,
-      levelKey
+      modelId,
+      scenarioTitle,
+      rolePrompt,
+      partnerName,
+      voicePersona,
+      history,
+      grammarResult,
+      levelKey,
+      speechRate
     );
-    return {
-      ...llmResult,
-      learner_level: levelKey,
-      scores: realisticScores
-    };
+    if (llmResult) {
+      const realisticScores = calculateRealisticScores(
+        userMessage,
+        llmResult.is_grammar_perfect,
+        llmResult.corrected_sentence,
+        levelKey
+      );
+      return {
+        ...llmResult,
+        learner_level: levelKey,
+        scores: realisticScores
+      };
+    }
   }
 
-  // Robust fallback in case LLM is unreachable or timed out
   const convResult = generateContextualReply(
     userMessage,
     modelId,
@@ -2320,6 +2158,7 @@ async function buildCoachingResponse(
     history,
     grammarResult
   );
+
   const adaptedReply = adaptReplyToLevel(convResult.reply, levelKey, partnerName);
   const adaptedHint = levelProfile.hintTransform(convResult.followUpHint);
 
