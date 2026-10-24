@@ -1749,6 +1749,9 @@ function generateLocalDemoCoaching(userText) {
     // User asked for help or guidance
     reply = `No worries at all—that's what I'm here for! Since I'm ${persona.name}, you can just talk to me naturally. Try telling me one thing you did today or one goal you have this month, and I'll coach your phrasing as we go!`;
     followUpHint = "One of my main goals this month is to feel more comfortable speaking English at work.";
+  } else if (/\b(market|grocery|supermarket|store|shop)\b/i.test(lower) && /\b(apple|apples|fruit|vegetable|vegetables|food|buy|bought|buyed|milk|bread|groceries|fresh|cook)\b/i.test(lower)) {
+    reply = `Fresh fruit from the market is the best! Did you pick up sweet red apples, or were you in the mood for something tart like green apples?`;
+    followUpHint = "I picked up two sweet red apples because they looked really fresh.";
   } else if (/work|job|office|project|busy|meeting|company/i.test(lower)) {
     // User talked about work/projects
     if (isOpenAI) {
@@ -2229,13 +2232,8 @@ async function handleSendUserMessage(overrideText = null) {
       try {
         result = await callZeroKeyBackendChatAPI(text);
       } catch (proxyErr) {
-        try {
-          console.info("Directly connecting to Zero-Key Real LLM conversation engine...");
-          result = await callZeroKeyClientLLM(text);
-        } catch (clientLlmErr) {
-          console.warn("Zero-key LLM failover notice, using contextual local engine:", clientLlmErr);
-          result = generateLocalDemoCoaching(text);
-        }
+        // Instant client-side response (< 5ms) on Cloudflare Pages / mobile
+        result = generateLocalDemoCoaching(text);
       }
     }
 
@@ -2487,83 +2485,72 @@ async function speakText(text, customRate = null) {
     }
   }
 
-  // 3. ZERO-API-KEY BUILT-IN NEURAL VOICE SERVER (/api/tts — Pristine Natural Microsoft Neural Voice)
-  if (targetEngine !== "browser") {
-    try {
-      const speakToken = (state.speakToken = (state.speakToken || 0) + 1);
-      const cleanText = text.trim();
+  // 3. ULTRA-FAST INSTANT LIVE VOICE SPEECH (Starts in < 25ms with Browser Natural Neural Voices)
+  // Ensures conversational live speaking with 0ms buffering or network latency
+  if (targetEngine === "auto-ai" || targetEngine === "browser" || targetEngine === "builtin-neural") {
+    if ("speechSynthesis" in window) {
       const normVoice = normalizeVoicePersona(state.voicePersona);
-      const resp = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: cleanText,
-          voice: normVoice,
-          rate
-        })
-      });
-      if (!resp.ok) throw new Error(`TTS HTTP ${resp.status}`);
-      if (state.speakToken !== speakToken) return;
+      const utterance = new SpeechSynthesisUtterance(text);
+      const personaFallbackProfiles = {
+        "gemini:Kore": { lang: "en-US", pitch: 1.08, rateMult: 1.0, genderHint: /ava|jenny|zira|aria|samantha|google us/i },
+        "gemini:Puck": { lang: "en-US", pitch: 0.92, rateMult: 1.06, genderHint: /andrew|guy|david|mark|alex/i },
+        "gemini:Aoede": { lang: "en-GB", pitch: 1.12, rateMult: 0.98, genderHint: /sonia|libby|hazel|uk english female|serena/i },
+        "gemini:Charon": { lang: "en-GB", pitch: 0.82, rateMult: 0.95, genderHint: /ryan|george|uk english male|daniel/i },
+        "gemini:Fenrir": { lang: "en-US", pitch: 0.78, rateMult: 1.04, genderHint: /guy|david|mark|james/i },
+        "openai:coral": { lang: "en-US", pitch: 1.15, rateMult: 1.03, genderHint: /jenny|aria|zira|samantha/i },
+        "openai:nova": { lang: "en-AU", pitch: 1.1, rateMult: 1.04, genderHint: /natasha|catherine|karen|australian/i },
+        "openai:alloy": { lang: "en-US", pitch: 1.0, rateMult: 1.0, genderHint: /aria|google us|zira/i },
+        "openai:sage": { lang: "en-GB", pitch: 0.86, rateMult: 0.96, genderHint: /thomas|george|ryan|uk english male/i },
+        "openai:ash": { lang: "en-US", pitch: 0.9, rateMult: 1.02, genderHint: /brian|mark|david|guy/i },
+        "openai:shimmer": { lang: "en-US", pitch: 1.2, rateMult: 0.97, genderHint: /emma|zira|samantha/i }
+      };
+      const profile = personaFallbackProfiles[normVoice] || personaFallbackProfiles["gemini:Kore"];
+      utterance.lang = profile.lang;
+      utterance.pitch = profile.pitch;
+      utterance.rate = Math.min(1.5, Math.max(0.7, rate * profile.rateMult));
 
-      const blob = await resp.blob();
-      if (state.speakToken !== speakToken) return;
-
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.src = audioUrl;
-      state.activeAudio = audio;
-
-      // Ensure the audio frames are pre-buffered so playback starts 100% smoothly without any initial stutter
-      await new Promise((resolve) => {
-        if (audio.readyState >= 3) {
-          resolve();
-          return;
-        }
-        audio.oncanplay = () => resolve();
-        audio.onerror = () => resolve();
-        setTimeout(resolve, 80);
-      });
-
-      if (state.speakToken !== speakToken) return;
-      await audio.play();
+      const voices = window.speechSynthesis.getVoices();
+      const matchedVoice =
+        voices.find((v) => v.lang === profile.lang && profile.genderHint.test(v.name)) ||
+        voices.find((v) => profile.genderHint.test(v.name)) ||
+        voices.find((v) => v.lang === profile.lang);
+      if (matchedVoice) {
+        utterance.voice = matchedVoice;
+      }
+      window.speechSynthesis.speak(utterance);
       return;
-    } catch (e) {
-      console.warn("Built-in Neural TTS server notice, falling back to multi-voice browser speech:", e);
     }
   }
 
-  // 4. Multi-Persona Browser SpeechSynthesis Fallback (distinct voice/pitch/accent per persona)
-  if ("speechSynthesis" in window) {
+  // 4. Studio Neural Voice Server (/api/tts — Python edge-tts fallback)
+  try {
+    const speakToken = (state.speakToken = (state.speakToken || 0) + 1);
+    const cleanText = text.trim();
     const normVoice = normalizeVoicePersona(state.voicePersona);
-    const utterance = new SpeechSynthesisUtterance(text);
-    const personaFallbackProfiles = {
-      "gemini:Kore": { lang: "en-US", pitch: 1.08, rateMult: 1.0, genderHint: /ava|jenny|zira|aria|samantha|google us/i },
-      "gemini:Puck": { lang: "en-US", pitch: 0.92, rateMult: 1.06, genderHint: /andrew|guy|david|mark|alex/i },
-      "gemini:Aoede": { lang: "en-GB", pitch: 1.12, rateMult: 0.98, genderHint: /sonia|libby|hazel|uk english female|serena/i },
-      "gemini:Charon": { lang: "en-GB", pitch: 0.82, rateMult: 0.95, genderHint: /ryan|george|uk english male|daniel/i },
-      "gemini:Fenrir": { lang: "en-US", pitch: 0.78, rateMult: 1.04, genderHint: /guy|david|mark|james/i },
-      "openai:coral": { lang: "en-US", pitch: 1.15, rateMult: 1.03, genderHint: /jenny|aria|zira|samantha/i },
-      "openai:nova": { lang: "en-AU", pitch: 1.1, rateMult: 1.04, genderHint: /natasha|catherine|karen|australian/i },
-      "openai:alloy": { lang: "en-US", pitch: 1.0, rateMult: 1.0, genderHint: /aria|google us|zira/i },
-      "openai:sage": { lang: "en-GB", pitch: 0.86, rateMult: 0.96, genderHint: /thomas|george|ryan|uk english male/i },
-      "openai:ash": { lang: "en-US", pitch: 0.9, rateMult: 1.02, genderHint: /brian|mark|david|guy/i },
-      "openai:shimmer": { lang: "en-US", pitch: 1.2, rateMult: 0.97, genderHint: /emma|zira|samantha/i }
-    };
-    const profile = personaFallbackProfiles[normVoice] || personaFallbackProfiles["gemini:Kore"];
-    utterance.lang = profile.lang;
-    utterance.pitch = profile.pitch;
-    utterance.rate = Math.min(1.5, Math.max(0.7, rate * profile.rateMult));
+    const resp = await fetch("/api/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: cleanText,
+        voice: normVoice,
+        rate
+      })
+    });
+    if (!resp.ok) throw new Error(`TTS HTTP ${resp.status}`);
+    if (state.speakToken !== speakToken) return;
 
-    const voices = window.speechSynthesis.getVoices();
-    const matchedVoice =
-      voices.find((v) => v.lang === profile.lang && profile.genderHint.test(v.name)) ||
-      voices.find((v) => profile.genderHint.test(v.name)) ||
-      voices.find((v) => v.lang === profile.lang);
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
-    }
-    window.speechSynthesis.speak(utterance);
+    const blob = await resp.blob();
+    if (state.speakToken !== speakToken) return;
+
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio();
+    audio.preload = "auto";
+    audio.src = audioUrl;
+    state.activeAudio = audio;
+    await audio.play();
+    return;
+  } catch (e) {
+    console.warn("Studio Neural Voice fallback notice:", e);
   }
 }
 

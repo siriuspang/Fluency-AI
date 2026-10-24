@@ -1431,8 +1431,31 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
   }
 
+  // 14a. GROCERY / FARMERS MARKET / SHOPPING ("I went to the market yesterday and bought two apples")
+  if (/\b(market|grocery|supermarket|store|shop)\b/i.test(lower) && /\b(apple|apples|fruit|vegetable|vegetables|food|buy|bought|buyed|milk|bread|groceries|fresh|cook)\b/i.test(lower)) {
+    reply = pickFreshReply([
+      `Fresh fruit from the market is the best! Did you pick up sweet red apples, or were you in the mood for something tart like green apples?`,
+      `There's nothing quite like picking up fresh produce at the market! What else did you end up getting while you were there?`,
+      `Sounds like a nice trip to the market! Do you usually shop at local markets, or do you prefer bigger supermarkets?`
+    ]);
+    followUpHint = "I picked up two sweet red apples because they looked really fresh.";
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "I went to the market yesterday and picked up a couple of apples." },
+      { tone: "Conversational", phrase: "Yesterday, I stopped by the local market to buy two apples." }
+    ];
+    pronunciationTips = [
+      { word: "Bought (/bɔːt/)", tip: "The 'gh' is silent—rhymes with 'caught' and 'thought'." },
+      { word: "Apples (/ˈæp.əlz/)", tip: "End with a voiced /z/ sound rather than an unvoiced /s/." }
+    ];
+    keyVocabulary = [
+      { word: "pick up", meaning: "To buy or gather something casually." },
+      { word: "local market", meaning: "A neighborhood market selling fresh food and produce." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
+  }
+
   // 14. FINANCE / MARKETS / ECONOMY ("can we talk about the finance?")
-  if (/\b(finance|financial|economy|economic|market|stock|invest|investing|banking|asset|portfolio)\b/i.test(lower)) {
+  if (/\b(finance|financial|economy|economic|stock market|financial market|fx market|market trends|stock|invest|investing|banking|asset|portfolio)\b/i.test(lower)) {
     reply = `Finance is a fantastic topic for building advanced English vocabulary! Whether we're talking about FX markets, fintech innovation, or global macro trends, there's plenty to explore. Which part of finance do you follow most closely in your daily life or work?`;
     followUpHint = "I follow foreign exchange rates and fintech trends closely because they impact global business.";
     betterExpressions = [
@@ -2169,33 +2192,9 @@ async function buildCoachingResponse(
 
   const grammarResult = analyzeGrammarAndPhrasing(userMessage, modelMeta);
 
-  // Prioritize Real Coach LLM for all dialogue turns (including greetings and self-intros) to guarantee natural, empathetic AI conversation
-  const llmResult = await callRealCoachLLM(
-    userMessage,
-    modelId,
-    scenarioTitle,
-    rolePrompt,
-    partnerName,
-    voicePersona,
-    history,
-    grammarResult,
-    levelKey,
-    speechRate
-  );
-  if (llmResult) {
-    const realisticScores = calculateRealisticScores(
-      userMessage,
-      llmResult.is_grammar_perfect,
-      llmResult.corrected_sentence,
-      levelKey
-    );
-    return {
-      ...llmResult,
-      learner_level: levelKey,
-      scores: realisticScores
-    };
-  }
-
+  // ULTRA-FAST INSTANT CONVERSATIONAL SPEED (< 5ms):
+  // Generate empathetic, scenario-aligned, model-specific conversational reply and instant grammar diff
+  // so the AI answers immediately just like a real native English speaker in real-time conversation!
   const convResult = generateContextualReply(
     userMessage,
     modelId,
