@@ -2302,7 +2302,8 @@ const server = http.createServer(async (req, res) => {
 
   // 3. STATIC FILE SERVER (with Cache-Control: no-store so edits take effect immediately)
   const safePath = pathname === "/" ? "/index.html" : pathname;
-  const filePath = path.join(__dirname, safePath);
+  const publicCandidate = path.join(__dirname, "public", safePath);
+  const filePath = fs.existsSync(publicCandidate) ? publicCandidate : path.join(__dirname, safePath);
 
   if (!filePath.startsWith(__dirname)) {
     res.writeHead(403);
