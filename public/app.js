@@ -1797,6 +1797,38 @@ function generateLocalDemoCoaching(userText) {
     corrected = clean.replace(/i am agree/gi, "I completely agree");
     isPerfect = false;
     explanation = "'Agree' is an action verb, not an adjective—use 'I agree' or 'I completely agree' instead of 'I am agree'.";
+  } else if (/\bbuyed\b/i.test(clean)) {
+    corrected = clean.replace(/\bbuyed\b/gi, "bought");
+    isPerfect = false;
+    explanation = "'Buy' has an irregular past tense: 'bought' (not 'buyed').";
+  } else if (/\beated\b/i.test(clean)) {
+    corrected = clean.replace(/\beated\b/gi, "ate");
+    isPerfect = false;
+    explanation = "'Eat' has an irregular past tense: 'ate' (not 'eated').";
+  } else if (/\bgoed\b/i.test(clean)) {
+    corrected = clean.replace(/\bgoed\b/gi, "went");
+    isPerfect = false;
+    explanation = "'Go' has an irregular past tense: 'went' (not 'goed').";
+  } else if (/\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/i.test(clean)) {
+    corrected = clean.replace(/\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/gi, "$1 I went");
+    isPerfect = false;
+    explanation = "In the past context, use the past tense 'went' instead of 'go'.";
+  } else if (/\bi\s+go\s+(?:to\s+(?:the\s+)?)?market\s+yesterday\b/i.test(clean)) {
+    corrected = clean.replace(/\bi\s+go\s+(?:to\s+(?:the\s+)?)?market\s+yesterday\b/gi, "I went to the market yesterday");
+    isPerfect = false;
+    explanation = "Use the past tense 'went' with the article 'the' ('went to the market yesterday').";
+  } else if (/\b(he|she|it|this|that)\s+don'?t\b/i.test(clean)) {
+    corrected = clean.replace(/\b(he|she|it|this|that)\s+don'?t\b/gi, "$1 doesn't");
+    isPerfect = false;
+    explanation = "Third-person singular subjects take 'doesn't' instead of 'don't'.";
+  } else if (/\b(he|she|it|this|that)\s+have\b/i.test(clean)) {
+    corrected = clean.replace(/\b(he|she|it|this|that)\s+have\b/gi, "$1 has");
+    isPerfect = false;
+    explanation = "Third-person singular subjects take 'has' instead of 'have'.";
+  } else if (/\b(two|three|four|five|several|many|a couple of)\s+apple\b/i.test(clean)) {
+    corrected = clean.replace(/\b(two|three|four|five|several|many|a couple of)\s+apple\b/gi, "$1 apples");
+    isPerfect = false;
+    explanation = "Plural numbers and quantifiers require the plural noun 'apples'.";
   } else if (/discuss about/i.test(clean)) {
     corrected = clean.replace(/discuss about/gi, "discuss");
     isPerfect = false;
@@ -1817,10 +1849,6 @@ function generateLocalDemoCoaching(userText) {
     corrected = "Hi there! Who are you, and what's your role today?";
     isPerfect = true;
     explanation = "'Hi there. Who are you?' is grammatically correct! In polite conversation, adding 'Nice to meet you—could you tell me a bit about yourself?' sounds even warmer.";
-  } else if (wordLen < 6) {
-    corrected = `${clean.replace(/[.!?]+$/, "")}—could you tell me a bit more about that?`;
-    isPerfect = true;
-    explanation = "Your short phrase is grammatically fine! Try adding a follow-up clause or detail to build longer conversational turns.";
   }
 
   // 3. Contextual Better Expressions based on what the user actually said
@@ -2022,29 +2050,45 @@ async function handleSendUserMessage(overrideText = null) {
     renderCoachingFeedback(coachingData);
     updateMetrics(result.scores, text);
 
-    // If the server returned an early-streamed reply (~1.8s), fetch the completed deep LLM coaching in the background!
+    // If the server ever returns an async pending coach ID, poll until ready
     if (result.pending_coach_id) {
-      fetch(`/api/coach-result?id=${encodeURIComponent(result.pending_coach_id)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((bgData) => {
-          if (bgData && bgData.ready && bgData.coaching) {
-            const c = bgData.coaching;
-            if (c.follow_up_hint && dom.hintText) {
-              dom.hintText.textContent = `"${c.follow_up_hint}"`;
+      let pollCount = 0;
+      const pollCoach = () => {
+        pollCount++;
+        fetch(`/api/coach-result?id=${encodeURIComponent(result.pending_coach_id)}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((bgData) => {
+            if (bgData && bgData.ready && bgData.coaching) {
+              const c = bgData.coaching;
+              if (c.follow_up_hint && dom.hintText) {
+                dom.hintText.textContent = `"${c.follow_up_hint}"`;
+              }
+              renderCoachingFeedback({
+                lastUtterance: text,
+                correctedSentence: c.corrected_sentence,
+                correctedVariants: c.corrected_variants,
+                grammarExplanation: c.grammar_explanation,
+                isPerfect: c.is_grammar_perfect,
+                betterExpressions: c.better_expressions,
+                pronunciationTips: c.pronunciation_tips,
+                vocabulary: c.key_vocabulary
+              });
+              saveSentenceToHistory({
+                userSaid: text,
+                corrected: c.corrected_sentence,
+                explanation: c.grammar_explanation,
+                betterExpression: c.better_expressions?.[0]?.phrase || "",
+                starred: !c.is_grammar_perfect
+              });
+            } else if (pollCount < 6) {
+              setTimeout(pollCoach, 1000);
             }
-            renderCoachingFeedback({
-              lastUtterance: text,
-              correctedSentence: c.corrected_sentence,
-              correctedVariants: c.corrected_variants,
-              grammarExplanation: c.grammar_explanation,
-              isPerfect: c.is_grammar_perfect,
-              betterExpressions: c.better_expressions,
-              pronunciationTips: c.pronunciation_tips,
-              vocabulary: c.key_vocabulary
-            });
-          }
-        })
-        .catch(() => {});
+          })
+          .catch(() => {
+            if (pollCount < 6) setTimeout(pollCoach, 1000);
+          });
+      };
+      setTimeout(pollCoach, 800);
     }
 
     saveSentenceToHistory({

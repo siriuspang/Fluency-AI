@@ -665,6 +665,76 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
       note: `"Agree" is an action verb, not an adjective—say "I agree" rather than "I am agree".`
     },
     {
+      regex: /\bbuyed\b/gi,
+      replace: "bought",
+      note: `"Buy" has an irregular past tense: "bought" (not "buyed").`
+    },
+    {
+      regex: /\beated\b/gi,
+      replace: "ate",
+      note: `"Eat" has an irregular past tense: "ate" (not "eated").`
+    },
+    {
+      regex: /\bgoed\b/gi,
+      replace: "went",
+      note: `"Go" has an irregular past tense: "went" (not "goed").`
+    },
+    {
+      regex: /\bsleeped\b/gi,
+      replace: "slept",
+      note: `"Sleep" has an irregular past tense: "slept" (not "sleeped").`
+    },
+    {
+      regex: /\bdrinked\b/gi,
+      replace: "drank",
+      note: `"Drink" has an irregular past tense: "drank" (not "drinked").`
+    },
+    {
+      regex: /\bfeeled\b/gi,
+      replace: "felt",
+      note: `"Feel" has an irregular past tense: "felt" (not "feeled").`
+    },
+    {
+      regex: /\bteached\b/gi,
+      replace: "taught",
+      note: `"Teach" has an irregular past tense: "taught" (not "teached").`
+    },
+    {
+      regex: /\bcatched\b/gi,
+      replace: "caught",
+      note: `"Catch" has an irregular past tense: "caught" (not "catched").`
+    },
+    {
+      regex: /\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/gi,
+      replace: "$1 I went",
+      note: `In the past context ("$1"), use the past tense "went" instead of "go".`
+    },
+    {
+      regex: /\bi\s+go\s+(?:to\s+(?:the\s+)?)?market\s+yesterday\b/gi,
+      replace: "I went to the market yesterday",
+      note: `Use the past tense "went" with the article "the" ("went to the market yesterday").`
+    },
+    {
+      regex: /\b(he|she|it|this|that)\s+don'?t\b/gi,
+      replace: "$1 doesn't",
+      note: `Third-person singular subjects take "doesn't" instead of "don't".`
+    },
+    {
+      regex: /\b(he|she|it|this|that)\s+have\b/gi,
+      replace: "$1 has",
+      note: `Third-person singular subjects take "has" instead of "have".`
+    },
+    {
+      regex: /\b(two|three|four|five|several|many|a couple of)\s+apple\b/gi,
+      replace: "$1 apples",
+      note: `Plural numbers and quantifiers take the plural noun "apples".`
+    },
+    {
+      regex: /\ba\s+(apple|orange|egg|elephant|umbrella|hour|idea)\b/gi,
+      replace: "an $1",
+      note: `Use the article "an" before words starting with a vowel sound.`
+    },
+    {
       regex: /\bdiscuss about\b/gi,
       replace: "discuss",
       note: `"Discuss" already means "talk about", so it takes a direct object without "about".`
@@ -1766,17 +1836,23 @@ function formatFullCoachingPayload(parsed, userMessage, localGrammar, levelKey) 
   const casualNative = (parsed?.casual_native || localGrammar.correctedVariants?.[1]?.sentence || directFix).trim();
   const fluentPolite = (parsed?.fluent_polite || localGrammar.correctedVariants?.[2]?.sentence || directFix).trim();
 
+  // Determine if grammar is truly perfect: if directFix differs from userMessage, it's NOT perfect!
+  const hasDiff = directFix.toLowerCase().replace(/[^\w\s]/g, "") !== userMessage.toLowerCase().replace(/[^\w\s]/g, "");
+  let isGrammarPerfect = false;
+  if (!hasDiff) {
+    isGrammarPerfect = typeof parsed?.is_grammar_perfect === "boolean" ? parsed.is_grammar_perfect : localGrammar.isPerfect;
+  }
+
   return {
     reply: adaptReplyToLevel((parsed?.reply || "").trim(), levelKey),
     follow_up_hint:
       parsed?.follow_up_hint || "That makes sense! Let me tell you a little more about what happened.",
-    is_grammar_perfect:
-      typeof parsed?.is_grammar_perfect === "boolean" ? parsed.is_grammar_perfect : localGrammar.isPerfect,
+    is_grammar_perfect: isGrammarPerfect,
     corrected_sentence: directFix,
     corrected_variants: [
-      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: directFix },
-      { label: "추천 1 · Casual Native", sentence: casualNative },
-      { label: "추천 2 · Fluent & Expressive", sentence: fluentPolite }
+      { label: "Grammar Fix", sentence: directFix },
+      { label: "Alternative 1 · Casual Native", sentence: casualNative },
+      { label: "Alternative 2 · Fluent & Expressive", sentence: fluentPolite }
     ],
     grammar_explanation: parsed?.grammar_explanation || localGrammar.explanation,
     better_expressions:
@@ -1948,43 +2024,10 @@ Instructions:
         }
       });
 
-      // Race between early streaming reply (~1.8s) and full turn completion
-      const winner = await Promise.race([
-        earlyTurnPromise,
-        workerState.busyPromise.then((fullRes) => ({ early: false, fullRes }))
-      ]);
-
-      if (winner && winner.early && winner.reply) {
-        const directFix = localGrammar.corrected;
-        const casualNative = localGrammar.correctedVariants?.[1]?.sentence || directFix;
-        const fluentPolite = localGrammar.correctedVariants?.[2]?.sentence || directFix;
-        return {
-          reply: winner.reply,
-          follow_up_hint: winner.follow_up_hint || "That makes sense! Let me share a bit more.",
-          pending_coach_id: winner.turnId,
-          is_grammar_perfect: localGrammar.isPerfect,
-          corrected_sentence: directFix,
-          corrected_variants: localGrammar.correctedVariants,
-          grammar_explanation: localGrammar.explanation,
-          better_expressions: [
-            { tone: "Casual Native", phrase: casualNative },
-            { tone: "Fluent & Expressive", phrase: fluentPolite }
-          ],
-          pronunciation_tips: [
-            { word: "Connected Speech", tip: "Link consonant endings smoothly into the next vowel sound." },
-            { word: "Sentence Stress", tip: "Emphasize key nouns, main verbs, and emotional adjectives." }
-          ],
-          key_vocabulary: [
-            { word: "express yourself", meaning: "To communicate your thoughts and feelings clearly." },
-            { word: "build confidence", meaning: "To feel more sure and comfortable when speaking." }
-          ],
-          recommended_speech_rate: null
-        };
-      }
-
-      if (winner && !winner.early && winner.fullRes) {
-        const fullRes = winner.fullRes;
-        if (fullRes.reply && voicePersona) {
+      // Await full turn completion (~2.5-3.5s) to guarantee accurate LLM grammar correction
+      const fullRes = await workerState.busyPromise;
+      if (fullRes && fullRes.reply) {
+        if (voicePersona) {
           prewarmTtsMatchingClientSplit(
             fullRes.reply,
             voicePersona,
