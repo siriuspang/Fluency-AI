@@ -631,9 +631,12 @@ function syncSettingsUI() {
       : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
   }
   if (dom.userInput) {
-    dom.userInput.placeholder = (state.conversationMode === "voice" || state.autoSpeak)
-      ? "Type in English (or press mic to speak)..."
-      : "Type in English (Chat Mode · Silent Messenger)...";
+    const isMobile = window.innerWidth <= 768;
+    dom.userInput.placeholder = isMobile
+      ? "Type in English..."
+      : (state.conversationMode === "voice" || state.autoSpeak)
+      ? "Type in English (or press Speak to talk)..."
+      : "Type in English (Chat Mode · Silent)...";
   }
 
   dom.geminiModelGroup.classList.toggle("hidden", state.provider !== "gemini");
@@ -1668,37 +1671,43 @@ function generateLocalDemoCoaching(userText) {
   const modelStyles = {
     "gemini-4-argon": {
       tag: "Gemini 4 Argon",
-      opener: "Great question!",
+      greeting: "Hi there! Wonderful to meet you.",
+      thoughtfulOpener: "That's an interesting point!",
       closerCasual: "What would you love to talk about today—your hobbies, work, or something fun you did recently?",
       closerAction: "How would you like to dive in?"
     },
     "gemini-3.8-flash": {
       tag: "Gemini 3.8 Flash",
-      opener: "Hey! Glad you asked.",
+      greeting: "Hey there! Great to connect with you.",
+      thoughtfulOpener: "Good point!",
       closerCasual: "Tell me a bit about yourself—how is your day going so far?",
       closerAction: "What's on your mind right now?"
     },
     "gemini-3.5-flash-lite": {
       tag: "Gemini 3.5 Flash-Lite",
-      opener: "Hi there!",
+      greeting: "Hello! Lovely to meet you.",
+      thoughtfulOpener: "That makes sense!",
       closerCasual: "What topic do you feel like practicing today?",
       closerAction: "Ready for our next question?"
     },
     "gpt-4o": {
       tag: "ChatGPT (GPT-4o)",
-      opener: "It's wonderful to meet you!",
+      greeting: "Hi there! It's so nice to meet you.",
+      thoughtfulOpener: "That's a thoughtful question!",
       closerCasual: "I'd love to hear a little about you—what inspired you to practice English speaking today?",
       closerAction: "Shall we jump right into the scenario, or warm up with some small talk first?"
     },
     "gpt-4o-mini": {
       tag: "ChatGPT (GPT-4o Mini)",
-      opener: "Nice to meet you!",
+      greeting: "Hey! Glad to chat with you today.",
+      thoughtfulOpener: "Good question!",
       closerCasual: "How's everything going with you today?",
       closerAction: "What would you like to try first?"
     },
     "o3-mini": {
       tag: "ChatGPT (o3-mini)",
-      opener: "Hello! Let me introduce myself clearly.",
+      greeting: "Hello! Welcome to our speaking session.",
+      thoughtfulOpener: "Certainly, let's explore that.",
       closerCasual: "To tailor our conversation, what specific speaking skill—fluency, idioms, or grammar—are you focusing on today?",
       closerAction: "How would you like to structure our practice session?"
     }
@@ -1714,11 +1723,11 @@ function generateLocalDemoCoaching(userText) {
     /who are you|what is your name|what's your name|introduce yourself|what are you/i.test(lower)
   ) {
     // User asked "Who are you?" / "What's your name?"
-    reply = `${mStyle.opener} ${persona.intro} ${mStyle.closerCasual}`;
+    reply = `Hi there! I'm ${persona.name}, ${persona.role}. ${persona.intro} ${mStyle.closerCasual}`;
     followUpHint = `Nice to meet you, ${persona.name}! I'm practicing English so I can speak more naturally in real conversations.`;
-  } else if (/^(hi|hello|hey|good morning|good afternoon|good evening)\b/i.test(lower) && wordLen <= 5) {
+  } else if (/^(hi|hello|hey|good morning|good afternoon|good evening|howdy)[.!?]*$/i.test(clean) || (/^(hi|hello|hey|good morning|good afternoon|good evening)\b/i.test(lower) && wordLen <= 5)) {
     // Simple greeting
-    reply = `${mStyle.opener} I'm ${persona.name}, ${persona.role}. It's great to chat with you! ${mStyle.closerCasual}`;
+    reply = `${mStyle.greeting} I'm ${persona.name}, ${persona.role}. ${mStyle.closerCasual}`;
     followUpHint = "Hi! My day has been going pretty well so far. I'm excited to practice speaking English with you.";
   } else if (/how are you|how's it going|how are things|what's up/i.test(lower)) {
     // User asked how the AI is doing
@@ -1738,7 +1747,7 @@ function generateLocalDemoCoaching(userText) {
     followUpHint = "Lately I've been collaborating with my team on a new project, which requires a lot of planning.";
   } else if (/travel|trip|flight|hotel|vacation|visit|country/i.test(lower)) {
     // User talked about travel
-    reply = `${mStyle.opener} Travel is one of the best reasons to practice English. Where is the next place on your bucket list, or what's your favorite trip you've ever taken?`;
+    reply = `Travel is one of the best reasons to practice English! Where is the next place on your bucket list, or what's your favorite trip you've ever taken?`;
     followUpHint = "I'd really love to visit London or New York next year and explore the local neighborhoods.";
   } else if (/hobby|weekend|movie|music|book|sport|coffee|food|cook/i.test(lower)) {
     // User talked about hobbies / lifestyle
@@ -1746,7 +1755,7 @@ function generateLocalDemoCoaching(userText) {
     followUpHint = "On weekends, I usually enjoy grabbing coffee with friends and catching up on my favorite shows.";
   } else if (clean.endsWith("?")) {
     // User asked another open question
-    reply = `${mStyle.opener} I'd say the best approach is to keep things practical and conversational. What made you curious about that, and how do you usually handle it yourself?`;
+    reply = `${mStyle.thoughtfulOpener} I'd say the best approach is to keep things practical and conversational. What made you curious about that, and how do you usually handle it yourself?`;
     followUpHint = "I asked because I often wonder how native speakers express that naturally.";
   } else {
     // General conversational response tailored by scenario AND model + turn number
@@ -2932,6 +2941,18 @@ function bindEvents() {
   if (dom.mobileBackToChatBtn) {
     dom.mobileBackToChatBtn.addEventListener("click", () => setMobileActiveView("chat"));
   }
+
+  // Dynamic responsive placeholder update on resize
+  window.addEventListener("resize", () => {
+    if (dom.userInput && !dom.userInput.value) {
+      const isMobile = window.innerWidth <= 768;
+      dom.userInput.placeholder = isMobile
+        ? "Type in English..."
+        : (state.conversationMode === "voice" || state.autoSpeak)
+        ? "Type in English (or press Speak to talk)..."
+        : "Type in English (Chat Mode · Silent)...";
+    }
+  });
 
   dom.scenarioList.addEventListener("click", (e) => {
     const btn = e.target.closest(".scenario-btn");

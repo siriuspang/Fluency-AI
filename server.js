@@ -1496,8 +1496,8 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
   // 17. DIRECT QUESTION FROM USER ("Can you...", "Do you...", "What...", "How...", "Why...")
   if (/\?$/.test(rawClean.trim()) || /^(can|could|would|do|does|did|are|is|what|why|how|where|when)\b/i.test(lower)) {
     reply = pickFreshReply([
-      `That's a great question! As ${partnerName}, I'm always happy to adapt our conversation to whatever helps you most. What would make our practice session feel most helpful for you right now?`,
-      `Absolutely—I'm right here with you! Tell me how you'd like to take the next step, and we'll do it together.`
+      `I'd be glad to help with that! As ${partnerName}, I'm always happy to adapt our conversation to whatever helps you most. What would feel most helpful for you to focus on right now?`,
+      `Absolutely—I'm right here with you! Tell me how you'd like to take the next step, and we'll practice together.`
     ]);
     followUpHint = "Let's keep practicing with short, natural everyday sentences.";
     betterExpressions = [
