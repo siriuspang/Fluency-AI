@@ -917,11 +917,14 @@ function renderCoachingFeedback(coaching) {
   // 1. 내 문장 가시성 대폭 향상 & 틀린 단어 빨간색 취소선 하이라이트
   if (isInitialOrPlaceholder) {
     if (dom.lastUserUtterance) {
-      dom.lastUserUtterance.textContent = `"대화를 입력하거나 음성으로 말하면 어법 분석과 교정이 여기에 표시됩니다."`;
+      dom.lastUserUtterance.textContent = `"Speak or type in English to see real-time grammar feedback and native upgrades."`;
     }
     if (dom.userSentenceStatus) {
-      dom.userSentenceStatus.textContent = "오류 분석 대기";
+      dom.userSentenceStatus.textContent = "Ready";
       dom.userSentenceStatus.className = "user-sentence-status";
+    }
+    if (dom.grammarExplanation) {
+      dom.grammarExplanation.classList.add("hidden");
     }
   } else {
     const diff = computeWordDiff(rawUserUtterance, primarySentence);
@@ -929,18 +932,23 @@ function renderCoachingFeedback(coaching) {
       dom.lastUserUtterance.innerHTML = `"${diff.origHtml}"`;
     }
     if (dom.userSentenceStatus) {
-      if (coaching.isPerfect || !diff.hasErrors) {
-        dom.userSentenceStatus.textContent = "✅ 어법 완벽 (오류 없음)";
+      const isTrulyPerfect = (coaching.isPerfect === true) && !diff.hasErrors;
+      if (isTrulyPerfect) {
+        dom.userSentenceStatus.textContent = "✅ Perfect Grammar";
         dom.userSentenceStatus.className = "user-sentence-status perfect";
       } else {
-        dom.userSentenceStatus.textContent = "⚠️ 틀린 부분 표시됨 (빨간색)";
+        dom.userSentenceStatus.textContent = "⚠️ Issues Highlighted";
         dom.userSentenceStatus.className = "user-sentence-status has-error";
       }
     }
-  }
-
-  if (dom.grammarExplanation) {
-    dom.grammarExplanation.textContent = coaching.grammarExplanation || "문맥에 맞는 정확한 시제, 전치사, 관사 및 원어민 어순을 안내해 드립니다.";
+    if (dom.grammarExplanation) {
+      if (coaching.grammarExplanation) {
+        dom.grammarExplanation.classList.remove("hidden");
+        dom.grammarExplanation.textContent = coaching.grammarExplanation;
+      } else {
+        dom.grammarExplanation.classList.add("hidden");
+      }
+    }
   }
 
   // Mobile: If user receives new coaching while on Chat view, show notification badge on Coach tab!
@@ -1812,68 +1820,99 @@ function generateLocalDemoCoaching(userText) {
         : "I enjoy talking about technology, travel, and everyday life experiences.";
   }
 
-  // 2. Real Grammar & Naturalness Analysis of the user's actual sentence
+  // 2. Real Grammar & Naturalness Analysis of the user's actual sentence (Sequential Multi-Error Correction)
   let corrected = clean;
   let isPerfect = true;
-  let explanation = `Your sentence "${clean}" is grammatically accurate and natural!`;
+  const notes = [];
 
-  if (/i am agree/i.test(clean)) {
-    corrected = clean.replace(/i am agree/gi, "I completely agree");
-    isPerfect = false;
-    explanation = "'Agree' is an action verb, not an adjective—use 'I agree' or 'I completely agree' instead of 'I am agree'.";
-  } else if (/\bbuyed\b/i.test(clean)) {
-    corrected = clean.replace(/\bbuyed\b/gi, "bought");
-    isPerfect = false;
-    explanation = "'Buy' has an irregular past tense: 'bought' (not 'buyed').";
-  } else if (/\beated\b/i.test(clean)) {
-    corrected = clean.replace(/\beated\b/gi, "ate");
-    isPerfect = false;
-    explanation = "'Eat' has an irregular past tense: 'ate' (not 'eated').";
-  } else if (/\bgoed\b/i.test(clean)) {
-    corrected = clean.replace(/\bgoed\b/gi, "went");
-    isPerfect = false;
-    explanation = "'Go' has an irregular past tense: 'went' (not 'goed').";
-  } else if (/\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/i.test(clean)) {
-    corrected = clean.replace(/\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/gi, "$1 I went");
-    isPerfect = false;
-    explanation = "In the past context, use the past tense 'went' instead of 'go'.";
-  } else if (/\bi\s+go\s+(?:to\s+(?:the\s+)?)?market\s+yesterday\b/i.test(clean)) {
-    corrected = clean.replace(/\bi\s+go\s+(?:to\s+(?:the\s+)?)?market\s+yesterday\b/gi, "I went to the market yesterday");
-    isPerfect = false;
-    explanation = "Use the past tense 'went' with the article 'the' ('went to the market yesterday').";
-  } else if (/\b(he|she|it|this|that)\s+don'?t\b/i.test(clean)) {
-    corrected = clean.replace(/\b(he|she|it|this|that)\s+don'?t\b/gi, "$1 doesn't");
-    isPerfect = false;
-    explanation = "Third-person singular subjects take 'doesn't' instead of 'don't'.";
-  } else if (/\b(he|she|it|this|that)\s+have\b/i.test(clean)) {
-    corrected = clean.replace(/\b(he|she|it|this|that)\s+have\b/gi, "$1 has");
-    isPerfect = false;
-    explanation = "Third-person singular subjects take 'has' instead of 'have'.";
-  } else if (/\b(two|three|four|five|several|many|a couple of)\s+apple\b/i.test(clean)) {
-    corrected = clean.replace(/\b(two|three|four|five|several|many|a couple of)\s+apple\b/gi, "$1 apples");
-    isPerfect = false;
-    explanation = "Plural numbers and quantifiers require the plural noun 'apples'.";
-  } else if (/discuss about/i.test(clean)) {
-    corrected = clean.replace(/discuss about/gi, "discuss");
-    isPerfect = false;
-    explanation = "'Discuss' already means 'talk about', so it takes a direct object without 'about'.";
-  } else if (/more better/i.test(clean)) {
-    corrected = clean.replace(/more better/gi, "much better");
-    isPerfect = false;
-    explanation = "'Better' is already comparative. Use 'much better' or 'way better' for emphasis.";
-  } else if (/informations/i.test(clean)) {
-    corrected = clean.replace(/informations/gi, "information");
-    isPerfect = false;
-    explanation = "'Information' is an uncountable noun in English and never takes an '-s'.";
-  } else if (/^who you are\??$/i.test(clean)) {
-    corrected = "Who are you?";
-    isPerfect = false;
-    explanation = "In direct English questions, invert the verb and subject: 'Who are you?' (Use 'who you are' only in embedded clauses like 'Can you tell me who you are?').";
-  } else if (/hi there\.?\s*who are you\??/i.test(clean)) {
-    corrected = "Hi there! Who are you, and what's your role today?";
-    isPerfect = true;
-    explanation = "'Hi there. Who are you?' is grammatically correct! In polite conversation, adding 'Nice to meet you—could you tell me a bit about yourself?' sounds even warmer.";
+  const clientGrammarRules = [
+    // Preposition & Idiomatic Collocations
+    { regex: /\bby\s+walk\b/gi, replace: "on foot", note: "Use 'on foot' or 'walk' instead of 'by walk'." },
+    { regex: /\bevery\s+days\b/gi, replace: "every day", note: "'Every day' takes the singular form 'day'." },
+    { regex: /\blook\s+forward\s+to\s+(see|meet|hear|talk)\b/gi, replace: (_, v) => `look forward to ${v}ing`, note: "'Look forward to' is followed by a gerund (-ing)." },
+    { regex: /\bmarry\s+with\b/gi, replace: "marry", note: "'Marry' takes a direct object without 'with'." },
+    { regex: /\bgraduate\s+(high school|college|university)\b/gi, replace: "graduate from $1", note: "Use 'graduate from' when naming an institution." },
+    { regex: /\barrive\s+to\b/gi, replace: "arrive at", note: "Use 'arrive at' instead of 'arrive to'." },
+    { regex: /\binterested\s+(?:for|about)\b/gi, replace: "interested in", note: "Use 'interested in'." },
+    { regex: /\bin\s+the\s+weekend\b/gi, replace: "on the weekend", note: "Use 'on the weekend'." },
+    { regex: /\b(on|in)\s+yesterday\b/gi, replace: "yesterday", note: "Drop 'on/in' before 'yesterday'." },
+    { regex: /\b(on|in)\s+tomorrow\b/gi, replace: "tomorrow", note: "Drop 'on/in' before 'tomorrow'." },
+    { regex: /\bdiscuss\s+about\b/gi, replace: "discuss", note: "'Discuss' already means 'talk about' (drop 'about')." },
+    { regex: /\blisten\s+music\b/gi, replace: "listen to music", note: "Always say 'listen to music'." },
+    { regex: /\bexplain\s+me\b/gi, replace: "explain to me", note: "Say 'explain to me'." },
+    { regex: /\brecommend\s+me\b/gi, replace: "recommend to me", note: "Say 'recommend to me'." },
+    { regex: /\bgo\s+to\s+(home|downtown|abroad)\b/gi, replace: "go $1", note: "Drop 'to' before 'home/downtown/abroad'." },
+
+    // Subject-Verb Agreement
+    { regex: /\bi\s+am\s+agree\b/gi, replace: "I completely agree", note: "'Agree' is an action verb: say 'I agree' rather than 'I am agree'." },
+    { regex: /\b(he|she|it|this|that|someone|everyone|everybody|nobody)\s+don'?t\b/gi, replace: "$1 doesn't", note: "Third-person singular takes 'doesn't'." },
+    { regex: /\b(he|she|it|this|that|someone|everyone|everybody|nobody)\s+have\b/gi, replace: "$1 has", note: "Third-person singular takes 'has'." },
+    { regex: /\b(he|she|it|this|that)\s+go\b/gi, replace: "$1 goes", note: "Third-person singular takes 'goes'." },
+    { regex: /\b(he|she|it|this|that)\s+like\b/gi, replace: "$1 likes", note: "Third-person singular takes 'likes'." },
+    { regex: /\b(he|she|it|this|that)\s+want\b/gi, replace: "$1 wants", note: "Third-person singular takes 'wants'." },
+    { regex: /\b(he|she|it|this|that)\s+need\b/gi, replace: "$1 needs", note: "Third-person singular takes 'needs'." },
+    { regex: /\b(they|we|you)\s+was\b/gi, replace: "$1 were", note: "Plural subjects take 'were'." },
+    { regex: /\bpeople\s+(?:is|was)\b/gi, replace: (m) => (m.toLowerCase().includes("was") ? "people were" : "people are"), note: "'People' takes 'are' or 'were'." },
+
+    // Plurals & Quantifiers
+    { regex: /\b(two|three|four|five|several|many|a couple of|\d+)\s+apple\b/gi, replace: "$1 apples", note: "Plural quantifier requires 'apples'." },
+    { regex: /\b(two|three|four|five|several|many|a couple of|\d+)\s+shoe\b/gi, replace: "$1 shoes", note: "Plural count requires 'shoes'." },
+    { regex: /\b(two|three|four|five|several|many|a couple of|\d+)\s+(car|book|dog|cat|friend|year|day|month)\b/gi, replace: "$1 $2s", note: "Plural count requires a plural noun." },
+    { regex: /\b(two|three|four|five|several|many|a couple of|\d+)\s+person\b/gi, replace: "$1 people", note: "Use 'people' for plural of 'person'." },
+    { regex: /\bone\s+of\s+my\s+(friend|colleague|coworker|student|teacher|family)\b/gi, replace: "one of my $1s", note: "'One of my...' requires a plural noun (e.g. 'one of my friends')." },
+    { regex: /\b(informations|an\s+information)\b/gi, replace: "information", note: "'Information' is uncountable." },
+    { regex: /\b(advices|an\s+advice)\b/gi, replace: "advice", note: "'Advice' is uncountable." },
+
+    // Irregular Past Tense
+    { regex: /\bbuyed\b/gi, replace: "bought", note: "'Buy' past tense is 'bought'." },
+    { regex: /\beated\b/gi, replace: "ate", note: "'Eat' past tense is 'ate'." },
+    { regex: /\bgoed\b/gi, replace: "went", note: "'Go' past tense is 'went'." },
+    { regex: /\bsleeped\b/gi, replace: "slept", note: "'Sleep' past tense is 'slept'." },
+    { regex: /\bdrinked\b/gi, replace: "drank", note: "'Drink' past tense is 'drank'." },
+    { regex: /\bfeeled\b/gi, replace: "felt", note: "'Feel' past tense is 'felt'." },
+    { regex: /\bteached\b/gi, replace: "taught", note: "'Teach' past tense is 'taught'." },
+    { regex: /\bcatched\b/gi, replace: "caught", note: "'Catch' past tense is 'caught'." },
+    { regex: /\btaked\b/gi, replace: "took", note: "'Take' past tense is 'took'." },
+    { regex: /\bmaked\b/gi, replace: "made", note: "'Make' past tense is 'made'." },
+    { regex: /\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?go\b/gi, replace: "$1 I went", note: "In past context, use 'went'." },
+    { regex: /\b(yesterday|last\s+(?:night|week|month|year))\s+(?:i\s+)?meet\b/gi, replace: "$1 I met", note: "In past context, use 'met'." },
+
+    // Missing Be-verbs & Linking verbs
+    { regex: /\bit\s+very\s+(important|good|bad|nice|cold|hot|hard|difficult|easy|secret|cheap|expensive)\b/gi, replace: "it is very $1", note: "Add the linking verb 'is' before adjectives." },
+    { regex: /\b(he|she)\s+very\s+(kind|nice|smart|pretty|busy|tired)\b/gi, replace: "$1 is very $2", note: "Add the linking verb 'is' before adjectives." },
+    { regex: /\bi\s+very\s+(happy|sad|tired|busy|excited|glad)\b/gi, replace: "I am very $1", note: "Say 'I am very...'." },
+
+    // Comparisons & Question Forms
+    { regex: /\bmore\s+(better|easier|faster|cheaper|bigger|slower)\b/gi, replace: "much $1", note: "Double comparatives are incorrect: use 'much $1'." },
+    { regex: /\bwho\s+you\s+are\b/gi, replace: "who are you", note: "In direct questions, invert subject and verb: 'Who are you?'." },
+    { regex: /\bwhat\s+you\s+mean\b/gi, replace: "what do you mean", note: "In questions, use auxiliary 'do': 'What do you mean?'." }
+  ];
+
+  for (const rule of clientGrammarRules) {
+    if (rule.regex.test(corrected)) {
+      corrected = corrected.replace(rule.regex, rule.replace);
+      isPerfect = false;
+      notes.push(rule.note);
+    }
   }
+
+  // Capitalize first letter & ensure terminal punctuation
+  if (corrected.length > 0 && /^[a-z]/.test(corrected)) {
+    corrected = corrected.charAt(0).toUpperCase() + corrected.slice(1);
+  }
+  if (corrected.length > 0 && !/[.!?]$/.test(corrected)) {
+    const isQ = /^(can|could|would|should|will|do|does|did|is|are|was|were|what|why|how|where|when|who)\b/i.test(corrected);
+    corrected += isQ ? "?" : ".";
+  }
+
+  // Double check if text changed
+  if (corrected.toLowerCase().replace(/[^\w\s]/g, "") !== clean.toLowerCase().replace(/[^\w\s]/g, "")) {
+    isPerfect = false;
+  }
+
+  let explanation = isPerfect
+    ? `Your sentence "${clean}" is grammatically accurate and natural!`
+    : notes.join(" ");
 
   // 3. Contextual Better Expressions based on what the user actually said
   let expressions = [];

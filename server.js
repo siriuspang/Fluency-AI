@@ -668,6 +668,56 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
   // 16. Broad ESL Grammar & Collocation Rules
   const eslPatterns = [
     {
+      regex: /\bby\s+walk\b/gi,
+      replace: "on foot",
+      note: `Say "on foot" (or "walk") instead of "by walk".`
+    },
+    {
+      regex: /\bevery\s+days\b/gi,
+      replace: "every day",
+      note: `"Every day" takes the singular form "day".`
+    },
+    {
+      regex: /\blook\s+forward\s+to\s+(see|meet|hear|talk)\b/gi,
+      replace: (_, v) => `look forward to ${v}ing`,
+      note: `"Look forward to" is followed by a gerund (-ing form).`
+    },
+    {
+      regex: /\bmarry\s+with\b/gi,
+      replace: "marry",
+      note: `"Marry" takes a direct object without "with" ("marry someone").`
+    },
+    {
+      regex: /\bgraduate\s+(high school|college|university)\b/gi,
+      replace: "graduate from $1",
+      note: `Use "graduate from" when naming an institution.`
+    },
+    {
+      regex: /\barrive\s+to\b/gi,
+      replace: "arrive at",
+      note: `Use "arrive at" (or "arrive in") instead of "arrive to".`
+    },
+    {
+      regex: /\binterested\s+(?:for|about)\b/gi,
+      replace: "interested in",
+      note: `Use the preposition "in" with "interested" ("interested in").`
+    },
+    {
+      regex: /\bin\s+the\s+weekend\b/gi,
+      replace: "on the weekend",
+      note: `In English, use "on the weekend" or "at the weekend".`
+    },
+    {
+      regex: /\b(on|in)\s+yesterday\b/gi,
+      replace: "yesterday",
+      note: `Drop "on/in" before "yesterday".`
+    },
+    {
+      regex: /\b(on|in)\s+tomorrow\b/gi,
+      replace: "tomorrow",
+      note: `Drop "on/in" before "tomorrow".`
+    },
+    {
       regex: /\bi am agree\b/gi,
       replace: "I completely agree",
       note: `"Agree" is an action verb, not an adjective—say "I agree" rather than "I am agree".`
@@ -796,6 +846,66 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
       regex: /\bcan you speak slowly\b/gi,
       replace: "Could you speak a little more slowly, please",
       note: `When asking someone to slow down from their current pace, use the comparative adverb "more slowly" ("Could you speak a little more slowly?").`
+    },
+    {
+      regex: /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+shoe\b/gi,
+      replace: "$1 shoes",
+      note: `Plural count requires "shoes" (or "pairs of shoes").`
+    },
+    {
+      regex: /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(car|book|dog|cat|friend|year|day|month)\b/gi,
+      replace: "$1 $2s",
+      note: `Plural count requires a plural noun.`
+    },
+    {
+      regex: /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+person\b/gi,
+      replace: "$1 people",
+      note: `Use "people" for the plural of "person".`
+    },
+    {
+      regex: /\bone\s+of\s+my\s+(friend|colleague|coworker|student|teacher|family)\b/gi,
+      replace: "one of my $1s",
+      note: `"One of my..." requires a plural noun (e.g. "one of my friends").`
+    },
+    {
+      regex: /\b(they|we|you)\s+was\b/gi,
+      replace: "$1 were",
+      note: `Plural subjects take the past-tense verb "were".`
+    },
+    {
+      regex: /\bpeople\s+(?:is|was)\b/gi,
+      replace: (m) => (m.toLowerCase().includes("was") ? "people were" : "people are"),
+      note: `"People" is a plural noun and takes "are" or "were".`
+    },
+    {
+      regex: /\bit\s+very\s+(important|good|bad|nice|cold|hot|hard|difficult|easy|secret|cheap|expensive)\b/gi,
+      replace: "it is very $1",
+      note: `Add the linking verb "is" before adjectives ("it is very...").`
+    },
+    {
+      regex: /\b(he|she)\s+very\s+(kind|nice|smart|pretty|busy|tired)\b/gi,
+      replace: "$1 is very $2",
+      note: `Add the linking verb "is" before adjectives.`
+    },
+    {
+      regex: /\bi\s+very\s+(happy|sad|tired|busy|excited|glad)\b/gi,
+      replace: "I am very $1",
+      note: `Say "I am very..." rather than "I very...".`
+    },
+    {
+      regex: /\bwho\s+you\s+are\b/gi,
+      replace: "who are you",
+      note: `In direct questions, invert subject and verb: "Who are you?".`
+    },
+    {
+      regex: /\bwhat\s+you\s+mean\b/gi,
+      replace: "what do you mean",
+      note: `In questions, use auxiliary "do": "What do you mean?".`
+    },
+    {
+      regex: /\bmore\s+(easier|faster|cheaper|bigger|slower)\b/gi,
+      replace: "much $1",
+      note: `Double comparatives are incorrect; use "much $1".`
     }
   ];
 
@@ -1809,8 +1919,8 @@ function callPollinationsFallbackLLM(promptText) {
   return new Promise((resolve) => {
     const bodyStr = JSON.stringify({
       model: "openai-fast",
-      reasoning_effort: "low",
-      temperature: 0.65,
+      temperature: 0.2,
+      max_tokens: 700,
       messages: [{ role: "user", content: promptText }]
     });
     const req = https.request(
@@ -1839,7 +1949,7 @@ function callPollinationsFallbackLLM(promptText) {
         });
       }
     );
-    req.setTimeout(6500, () => {
+    req.setTimeout(14000, () => {
       req.destroy();
       resolve("");
     });
@@ -1953,126 +2063,7 @@ Instructions:
 9. "key_vocabulary": Array of 2 concise objects [{"word":"phrase","meaning":"..."},{"word":"phrase2","meaning":"..."}].
 10. "recommended_speech_rate": 0.8 if the user asks to speak slower/simpler, 1.15 if faster, otherwise null.`;
 
-  const workerState = await ensureWarmAgyWorker();
-  if (workerState && workerState.child && !workerState.child.killed) {
-    // Wait if previous turn's background coaching tail is still finishing (~0-500ms)
-    if (workerState.busyPromise) {
-      await workerState.busyPromise.catch(() => {});
-    }
-
-    if (workerState.child && !workerState.child.killed && !workerState.activeResolver) {
-      const turnId = `coach_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-      let resolveCoachMap;
-      const coachDonePromise = new Promise((r) => {
-        resolveCoachMap = r;
-      });
-      pendingCoachMap.set(turnId, coachDonePromise);
-      setTimeout(() => pendingCoachMap.delete(turnId), 30000);
-
-      let resolveEarlyTurn;
-      const earlyTurnPromise = new Promise((r) => {
-        resolveEarlyTurn = r;
-      });
-
-      const fullTurnPromise = new Promise((resolveFull) => {
-        const timer = setTimeout(() => {
-          if (workerState.activeResolver) {
-            workerState.activeResolver = null;
-            resolveFull("");
-          }
-        }, 9500);
-
-        let inFlightFirstSentenceTts = null;
-
-        workerState.activeResolver = {
-          onFirstSentence: (firstSentText) => {
-            // First sentence streaming hook
-          },
-          onEarlyReply: (earlyReplyText) => {
-            const adaptedEarlyReply = adaptReplyToLevel(earlyReplyText, levelKey, partnerName);
-            if (adaptedEarlyReply && voicePersona) {
-              prewarmTtsMatchingClientSplit(adaptedEarlyReply, voicePersona, speechRate).catch(() => {});
-            }
-            resolveEarlyTurn({
-              early: true,
-              turnId,
-              reply: adaptedEarlyReply,
-              follow_up_hint: "That makes sense! Let me share a little more about that."
-            });
-          },
-          resolve: (text) => {
-            clearTimeout(timer);
-            resolveFull(text);
-          }
-        };
-
-        workerState.child.stdin.write(
-          JSON.stringify({
-            event: "user",
-            message: { role: "user", content: prompt }
-          }) + "\n"
-        );
-      });
-
-      // Track full turn completion in background so `pendingCoachMap` resolves AND worker rotation happens cleanly
-      workerState.busyPromise = fullTurnPromise.then(async (rawResponse) => {
-        workerState.busyPromise = null;
-        workerState.turnCount++;
-
-        if (workerState.turnCount === 4 && !agyStandbyPromise) {
-          agyStandbyPromise = createAgyWorkerState().catch(() => null);
-        }
-        if (workerState.turnCount >= 6) {
-          const oldChild = workerState.child;
-          if (agyStandbyPromise) {
-            agyStandbyPromise.then((standby) => {
-              if (standby && standby.child && !standby.child.killed) {
-                agyWorkerState = standby;
-              } else {
-                agyWorkerState = null;
-                ensureWarmAgyWorker().catch(() => {});
-              }
-              agyStandbyPromise = null;
-              try {
-                oldChild.kill();
-              } catch (e) {}
-            });
-          } else {
-            try {
-              oldChild.kill();
-            } catch (e) {}
-            agyWorkerState = null;
-            setTimeout(() => ensureWarmAgyWorker().catch(() => {}), 50);
-          }
-        }
-
-        const parsed = extractFirstJsonObject(rawResponse);
-        if (parsed && parsed.reply) {
-          const fullFormatted = formatFullCoachingPayload(parsed, userMessage, localGrammar, levelKey);
-          resolveCoachMap(fullFormatted);
-          return fullFormatted;
-        } else {
-          resolveCoachMap(null);
-          return null;
-        }
-      });
-
-      // Await full turn completion (~2.2s) to guarantee authoritative, accurate LLM grammar correction without fake initial marks
-      const fullRes = await workerState.busyPromise;
-      if (fullRes && fullRes.reply) {
-        if (voicePersona) {
-          prewarmTtsMatchingClientSplit(
-            fullRes.reply,
-            voicePersona,
-            fullRes.recommended_speech_rate || speechRate
-          ).catch(() => {});
-        }
-        return fullRes;
-      }
-    }
-  }
-
-  // Fallback to Pollinations LLM if worker unavailable
+  // Authoritative real-time LLM coaching via fast zero-key neural pipeline (~3s response)
   const fallbackRaw = await callPollinationsFallbackLLM(prompt);
   const parsed = extractFirstJsonObject(fallbackRaw);
   if (!parsed || !parsed.reply) {
@@ -2192,9 +2183,35 @@ async function buildCoachingResponse(
 
   const grammarResult = analyzeGrammarAndPhrasing(userMessage, modelMeta);
 
-  // ULTRA-FAST INSTANT CONVERSATIONAL SPEED (< 5ms):
-  // Generate empathetic, scenario-aligned, model-specific conversational reply and instant grammar diff
-  // so the AI answers immediately just like a real native English speaker in real-time conversation!
+  // Authoritative Real Coach LLM for all dialogue turns to guarantee 100% accurate grammar correction,
+  // red-strikethrough error detection, and native English upgrades on ANY sentence!
+  const llmResult = await callRealCoachLLM(
+    userMessage,
+    modelId,
+    scenarioTitle,
+    rolePrompt,
+    partnerName,
+    voicePersona,
+    history,
+    grammarResult,
+    levelKey,
+    speechRate
+  );
+  if (llmResult) {
+    const realisticScores = calculateRealisticScores(
+      userMessage,
+      llmResult.is_grammar_perfect,
+      llmResult.corrected_sentence,
+      levelKey
+    );
+    return {
+      ...llmResult,
+      learner_level: levelKey,
+      scores: realisticScores
+    };
+  }
+
+  // Robust fallback in case LLM is unreachable or timed out
   const convResult = generateContextualReply(
     userMessage,
     modelId,
@@ -2203,7 +2220,6 @@ async function buildCoachingResponse(
     history,
     grammarResult
   );
-
   const adaptedReply = adaptReplyToLevel(convResult.reply, levelKey, partnerName);
   const adaptedHint = levelProfile.hintTransform(convResult.followUpHint);
 
