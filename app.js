@@ -1740,6 +1740,13 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
 
   // 2. Common keyboard typos and phonetic misspellings
   const spellingMap = [
+        { regex: /\bi\s+m\b/gi, replacement: "I'm", word: `"i m" → "I'm"` },
+    { regex: /\bim\b/gi, replacement: "I'm", word: `"im" → "I'm"` },
+    { regex: /\brigting\b/gi, replacement: "writing", word: '"rigting" → "writing"' },
+    { regex: /\bdyo\b/gi, replacement: "you", word: '"dyo" → "you"' },
+    { regex: /\bu\b/gi, replacement: "you", word: '"u" → "you"' },
+    { regex: /\br\b/gi, replacement: "are", word: '"r" → "are"' },
+    { regex: /\bur\b/gi, replacement: "your", word: '"ur" → "your"' },
     { regex: /\bundesodn\b/gi, replacement: "understand", word: '"undesodn" → "understand"' },
     { regex: /\bundestand\b/gi, replacement: "understand", word: '"undestand" → "understand"' },
     { regex: /\bundestood\b/gi, replacement: "understood", word: '"undestood" → "understood"' },
@@ -1957,6 +1964,19 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     corrected = corrected.replace(/\blook\s+forward\s+to\s+see\b/gi, "look forward to seeing");
     isPerfect = false;
     notes.push('"look forward to"의 "to"는 전치사이므로 뒤에 동명사(-ing)가 옵니다.');
+  }
+
+    // Flag isolated single consonants (e.g. "i m", "do n")
+  if (/\b[b-hj-z]\b/i.test(corrected)) {
+    isPerfect = false;
+    notes.push('단독 자음 수정: 불완전하게 분리된 철자를 올바른 단어 형태로 수정했습니다.');
+  }
+
+  // Capitalize isolated lowercase 'i'
+  if (/\bi\b/.test(corrected)) {
+    corrected = corrected.replace(/\bi\b/g, "I");
+    isPerfect = false;
+    notes.push('대명사 대문자 표기: 1인칭 대명사 "I"는 항상 대문자로 씁니다.');
   }
 
   // 12. Spacing and Punctuation
