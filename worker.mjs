@@ -613,7 +613,7 @@ export default {
         let finalIsPerfect = grammarResult.isPerfect;
         let finalVariants = grammarResult.correctedVariants;
 
-        let aiDebugInfo = { hasEnvAI: Boolean(env && env.AI), called: false, error: null };
+        let aiDebugInfo = { hasEnvAI: Boolean(env && env.AI), called: false, raw: null, error: null };
         // If Workers AI is available in env, query Llama 3.1 8B on Cloudflare GPU edge!
         if (env && env.AI) {
           aiDebugInfo.called = true;
@@ -640,8 +640,10 @@ Respond ONLY with a JSON object:
               max_tokens: 384,
               temperature: 0.3
             });
-            if (aiRes && aiRes.response) {
-              const cleaned = aiRes.response.replace(/```json/gi, "").replace(/```/g, "").trim();
+            aiDebugInfo.raw = aiRes;
+            const textContent = (aiRes && (aiRes.response || (typeof aiRes === "string" ? aiRes : JSON.stringify(aiRes)))) || "";
+            if (textContent) {
+              const cleaned = textContent.replace(/```json/gi, "").replace(/```/g, "").trim();
               const s = cleaned.indexOf("{");
               const e = cleaned.lastIndexOf("}");
               if (s !== -1 && e > s) {
