@@ -664,7 +664,7 @@ Respond ONLY with a JSON object:
               }
             }
           } catch (aiErr) {
-            // Use local grammarResult & convResult
+            aiDebugInfo.error = (aiErr && (aiErr.stack || aiErr.message)) || String(aiErr);
           }
         }
 
