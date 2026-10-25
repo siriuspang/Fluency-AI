@@ -430,7 +430,59 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     }
   }
 
-  // 1b. "I depressed by the time when I couldn't speak English well in my friend's wedding." & emotional/event grammar fixes
+
+  // 1c. "hows going" / "how is going" -> "how's it going?"
+  if (/\bhow'?s\s+going\b/i.test(corrected) || /\bhow\s+is\s+going\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bhow'?s\s+going\b/gi, "how's it going").replace(/\bhow\s+is\s+going\b/gi, "how's it going");
+    isPerfect = false;
+    notes.push(`Grammar fix: The standard conversational phrase requires the pronoun "it": use "how's it going?" instead of "hows going".`);
+  }
+
+  // 1d. "by walk" -> "on foot"
+  if (/\bby\s+walk\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bby\s+walk\b/gi, "on foot");
+    isPerfect = false;
+    notes.push(`Collocation fix: In English, walking to a place is expressed as "on foot" or using the verb "walk" ("I walked to work").`);
+  }
+
+  // 1e. "every days" -> "every day"
+  if (/\bevery\s+days\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bevery\s+days\b/gi, "every day");
+    isPerfect = false;
+    notes.push(`Determiner fix: "Every" is followed by a singular countable noun ("every day", not "every days").`);
+  }
+
+  // 1f. "she don't" / "he don't" -> doesn't
+  if (/\b(she|he|it)\s+don'?t\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(she|he|it)\s+don'?t\b/gi, "$1 doesn't");
+    isPerfect = false;
+    notes.push(`Subject-verb agreement: Third-person singular subjects (he/she/it) require "doesn't", not "don't".`);
+  }
+
+  // 1g. Past tense marker with base verb ("yesterday I go" -> "yesterday I went")
+  if (/\b(yesterday|last\s+(?:night|week|month|year))\b/i.test(corrected)) {
+    const pastMap = { go: "went", see: "saw", buy: "bought", eat: "ate", make: "made", come: "came", take: "took", write: "wrote" };
+    for (const [base, past] of Object.entries(pastMap)) {
+      const pReg = new RegExp(`(\b(?:yesterday|last\s+(?:night|week|month|year))\b[\s\w]*?\b)(${base})\b`, "gi");
+      if (pReg.test(corrected)) {
+        corrected = corrected.replace(pReg, `$1${past}`);
+        isPerfect = false;
+        notes.push(`Tense fix: Use the past tense "${past}" when referring to a past time marker like "yesterday".`);
+      }
+    }
+  }
+
+  // 1h. Number + singular noun ("two apple" -> "two apples")
+  if (/\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(apple|car|book|friend|day|hour|dollar|problem|student)\b/i.test(corrected)) {
+    corrected = corrected.replace(
+      /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(apple|car|book|friend|day|hour|dollar|problem|student)\b/gi,
+      "$1 $2s"
+    );
+    isPerfect = false;
+    notes.push(`Plural noun fix: Numbers greater than one require a plural noun ending in "-s".`);
+  }
+
+    // 1b. "I depressed by the time when I couldn't speak English well in my friend's wedding." & emotional/event grammar fixes
   if (/\bi\s+(depressed|embarrassed|frustrated|disappointed|ashamed|exhausted|confused)\b/i.test(corrected)) {
     corrected = corrected.replace(
       /\bi\s+(depressed|embarrassed|frustrated|disappointed|ashamed|exhausted|confused)\b/gi,
