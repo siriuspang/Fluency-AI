@@ -914,11 +914,11 @@ function renderCoachingFeedback(coaching) {
       dom.lastUserUtterance.innerHTML = `"${diff.origHtml}"`;
     }
     if (dom.userSentenceStatus) {
-      if (coaching.isPerfect || !diff.hasErrors) {
+      if (coaching.isPerfect && !diff.hasErrors) {
         dom.userSentenceStatus.textContent = "✅ 어법 완벽 (오류 없음)";
         dom.userSentenceStatus.className = "user-sentence-status perfect";
       } else {
-        dom.userSentenceStatus.textContent = "⚠️ 틀린 부분 표시됨 (빨간색)";
+        dom.userSentenceStatus.textContent = "⚠️ 어법 교정 완료 (오류 수정됨)";
         dom.userSentenceStatus.className = "user-sentence-status has-error";
       }
     }
@@ -1687,11 +1687,22 @@ const MODEL_PERSONAS = {
   }
 };
 
+// Comprehensive Grammar & Phrasing Analysis Engine
 function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
-  const rawOriginal = userMessage.trim();
+  const rawOriginal = (userMessage || "").trim();
   let corrected = rawOriginal;
   const notes = [];
   let isPerfect = true;
+
+  if (!corrected) {
+    return {
+      corrected: "",
+      correctedVariants: [],
+      isPerfect: true,
+      explanation: "Please enter an English sentence to speak.",
+      notes: []
+    };
+  }
 
   // 1. Broken / split contractions & spelling shortcuts
   const splitContractions = [
@@ -1705,23 +1716,25 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     { regex: /\bwould\s+n\b/gi, replacement: "wouldn't", word: '"would n" → "wouldn\'t"' },
     { regex: /\bhave\s+n\b/gi, replacement: "haven't", word: '"have n" → "haven\'t"' },
     { regex: /\bhas\s+n\b/gi, replacement: "hasn't", word: '"has n" → "hasn\'t"' },
-    { regex: /\bdidnt\b/gi, replacement: "didn't", word: '"didnt" → "didn\'t" (needs an apostrophe)' },
-    { regex: /\bcouldnt\b/gi, replacement: "couldn't", word: '"couldnt" → "couldn\'t" (needs an apostrophe)' },
-    { regex: /\bwouldnt\b/gi, replacement: "wouldn't", word: '"wouldnt" → "wouldn\'t" (needs an apostrophe)' },
-    { regex: /\bshouldnt\b/gi, replacement: "shouldn't", word: '"shouldnt" → "shouldn\'t" (needs an apostrophe)' },
-    { regex: /\bisnt\b/gi, replacement: "isn't", word: '"isnt" → "isn\'t" (needs an apostrophe)' },
-    { regex: /\barent\b/gi, replacement: "aren't", word: '"arent" → "aren\'t" (needs an apostrophe)' },
-    { regex: /\bwasnt\b/gi, replacement: "wasn't", word: '"wasnt" → "wasn\'t" (needs an apostrophe)' },
-    { regex: /\bwerent\b/gi, replacement: "weren't", word: '"werent" → "weren\'t" (needs an apostrophe)' },
-    { regex: /\bhavent\b/gi, replacement: "haven't", word: '"havent" → "haven\'t" (needs an apostrophe)' },
-    { regex: /\bhasnt\b/gi, replacement: "hasn't", word: '"hasnt" → "hasn\'t" (needs an apostrophe)' }
+    { regex: /\bdidnt\b/gi, replacement: "didn't", word: '"didnt" → "didn\'t"' },
+    { regex: /\bcouldnt\b/gi, replacement: "couldn't", word: '"couldnt" → "couldn\'t"' },
+    { regex: /\bwouldnt\b/gi, replacement: "wouldn't", word: '"wouldnt" → "wouldn\'t"' },
+    { regex: /\bshouldnt\b/gi, replacement: "shouldn't", word: '"shouldnt" → "shouldn\'t"' },
+    { regex: /\bisnt\b/gi, replacement: "isn't", word: '"isnt" → "isn\'t"' },
+    { regex: /\barent\b/gi, replacement: "aren't", word: '"arent" → "aren\'t"' },
+    { regex: /\bwasnt\b/gi, replacement: "wasn't", word: '"wasnt" → "wasn\'t"' },
+    { regex: /\bwerent\b/gi, replacement: "weren't", word: '"werent" → "weren\'t"' },
+    { regex: /\bhavent\b/gi, replacement: "haven't", word: '"havent" → "haven\'t"' },
+    { regex: /\bhasnt\b/gi, replacement: "hasn't", word: '"hasnt" → "hasn\'t"' },
+    { regex: /\bdont\b/gi, replacement: "don't", word: '"dont" → "don\'t"' },
+    { regex: /\bdoesnt\b/gi, replacement: "doesn't", word: '"doesnt" → "doesn\'t"' }
   ];
 
   for (const sc of splitContractions) {
     if (sc.regex.test(corrected)) {
       corrected = corrected.replace(sc.regex, sc.replacement);
       isPerfect = false;
-      notes.push(`Contraction fix: ${sc.word}.`);
+      notes.push(`축약형 수정: ${sc.word} 형태로 아포스트로피(')를 바르게 표기합니다.`);
     }
   }
 
@@ -1734,48 +1747,140 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     { regex: /\bunderstnd\b/gi, replacement: "understand", word: '"understnd" → "understand"' },
     { regex: /\bao\s+that\b/gi, replacement: "that", word: '"ao that" → "that"' },
     { regex: /\bao\b/gi, replacement: "about", word: '"ao" → "about"' },
-    { regex: /\blibary\b/gi, replacement: "library", word: '"libary" → "library" (don\'t forget the first "r" after "b")' },
-    { regex: /\bchanllenge(s?)\b/gi, replacement: "challenge$1", word: '"chanllenge" → "challenge" (spelled c-h-a-l-l-e-n-g-e)' },
+    { regex: /\blibary\b/gi, replacement: "library", word: '"libary" → "library"' },
+    { regex: /\bchanllenge(s?)\b/gi, replacement: "challenge$1", word: '"chanllenge" → "challenge"' },
     { regex: /\bchallange(s?)\b/gi, replacement: "challenge$1", word: '"challange" → "challenge"' },
-    { regex: /\bgrammer\b/gi, replacement: "grammar", word: '"grammer" → "grammar" (ends with "-ar")' },
-    { regex: /\bakward\b/gi, replacement: "awkward", word: '"akward" → "awkward" (spelled a-w-k-w-a-r-d)' },
-    { regex: /\bdollor(s?)\b/gi, replacement: "dollar$1", word: '"dollor" → "dollar" (ends with "-ar")' },
-    { regex: /\brecieve\b/gi, replacement: "receive", word: '"recieve" → "receive" ("i" before "e" except after "c")' },
+    { regex: /\bgrammer\b/gi, replacement: "grammar", word: '"grammer" → "grammar"' },
+    { regex: /\bakward\b/gi, replacement: "awkward", word: '"akward" → "awkward"' },
+    { regex: /\bdollor(s?)\b/gi, replacement: "dollar$1", word: '"dollor" → "dollar"' },
+    { regex: /\brecieve\b/gi, replacement: "receive", word: '"recieve" → "receive"' },
     { regex: /\bdefinately\b/gi, replacement: "definitely", word: '"definately" → "definitely"' },
     { regex: /\bseperate\b/gi, replacement: "separate", word: '"seperate" → "separate"' },
     { regex: /\boccured\b/gi, replacement: "occurred", word: '"occured" → "occurred"' },
     { regex: /\baccomodate\b/gi, replacement: "accommodate", word: '"accomodate" → "accommodate"' },
     { regex: /\benviroment\b/gi, replacement: "environment", word: '"enviroment" → "environment"' },
     { regex: /\bbecuase\b/gi, replacement: "because", word: '"becuase" → "because"' },
-    { regex: /\bpronounciation\b/gi, replacement: "pronunciation", word: '"pronounciation" → "pronunciation" ("nun", not "noun")' },
-    { regex: /\bsuprise(d|s)?\b/gi, replacement: "surprise$1", word: '"suprise" → "surprise" (spelled s-u-r-p-r-i-s-e)' },
+    { regex: /\bpronounciation\b/gi, replacement: "pronunciation", word: '"pronounciation" → "pronunciation"' },
+    { regex: /\bsuprise(d|s)?\b/gi, replacement: "surprise$1", word: '"suprise" → "surprise"' },
     { regex: /\bintersted\b/gi, replacement: "interested", word: '"intersted" → "interested"' },
     { regex: /\bdiffrent\b/gi, replacement: "different", word: '"diffrent" → "different"' },
-    { regex: /\bimportent\b/gi, replacement: "important", word: '"importent" → "important"' },
-    { regex: /\bcoudn'?t\b/gi, replacement: "couldn't", word: '"coudn\'t" → "couldn\'t" (spelled c-o-u-l-d-n\'-t with an "l")' },
-    { regex: /\bwoudn'?t\b/gi, replacement: "wouldn't", word: '"woudn\'t" → "wouldn\'t" (spelled w-o-u-l-d-n\'-t with an "l")' },
-    { regex: /\bshoudn'?t\b/gi, replacement: "shouldn't", word: '"shoudn\'t" → "shouldn\'t" (spelled s-h-o-u-l-d-n\'-t with an "l")' }
+    { regex: /\bimportent\b/gi, replacement: "important", word: '"importent" → "important"' }
   ];
 
   for (const sp of spellingMap) {
     if (sp.regex.test(corrected)) {
       corrected = corrected.replace(sp.regex, sp.replacement);
       isPerfect = false;
-      notes.push(`Spelling fix: ${sp.word}.`);
+      notes.push(`스펠링 교정: ${sp.word} 올바른 철자로 수정했습니다.`);
     }
   }
 
-  // 3. Collocation fixes: "have a trip" -> "take a trip" / "go on a trip"
+  // 3. Irregular verbs with incorrect -ed (buyed -> bought, etc.)
+  const badRegularPast = [
+    { regex: /\bbuyed\b/gi, replacement: "bought", bad: "buyed", correct: "bought" },
+    { regex: /\bcatched\b/gi, replacement: "caught", bad: "catched", correct: "caught" },
+    { regex: /\bteached\b/gi, replacement: "taught", bad: "teached", correct: "taught" },
+    { regex: /\bgoed\b/gi, replacement: "went", bad: "goed", correct: "went" },
+    { regex: /\beated\b/gi, replacement: "ate", bad: "eated", correct: "ate" },
+    { regex: /\bdrived\b/gi, replacement: "drove", bad: "drived", correct: "drove" },
+    { regex: /\bfeeled\b/gi, replacement: "felt", bad: "feeled", correct: "felt" },
+    { regex: /\bfinded\b/gi, replacement: "found", bad: "finded", correct: "found" },
+    { regex: /\bforgetted\b/gi, replacement: "forgot", bad: "forgetted", correct: "forgot" },
+    { regex: /\bheared\b/gi, replacement: "heard", bad: "heared", correct: "heard" },
+    { regex: /\bkeeped\b/gi, replacement: "kept", bad: "keeped", correct: "kept" },
+    { regex: /\bknowed\b/gi, replacement: "knew", bad: "knowed", correct: "knew" },
+    { regex: /\bleaved\b/gi, replacement: "left", bad: "leaved", correct: "left" },
+    { regex: /\blosed\b/gi, replacement: "lost", bad: "losed", correct: "lost" },
+    { regex: /\bmeeted\b/gi, replacement: "met", bad: "meeted", correct: "met" },
+    { regex: /\bpayed\b/gi, replacement: "paid", bad: "payed", correct: "paid" },
+    { regex: /\brunned\b/gi, replacement: "ran", bad: "runned", correct: "ran" },
+    { regex: /\branned\b/gi, replacement: "ran", bad: "ranned", correct: "ran" },
+    { regex: /\bsayed\b/gi, replacement: "said", bad: "sayed", correct: "said" },
+    { regex: /\bseed\b/gi, replacement: "saw", bad: "seed", correct: "saw" },
+    { regex: /\bsended\b/gi, replacement: "sent", bad: "sended", correct: "sent" },
+    { regex: /\bsleeped\b/gi, replacement: "slept", bad: "sleeped", correct: "slept" },
+    { regex: /\bspeaked\b/gi, replacement: "spoke", bad: "speaked", correct: "spoke" },
+    { regex: /\bspended\b/gi, replacement: "spent", bad: "spended", correct: "spent" },
+    { regex: /\btaked\b/gi, replacement: "took", bad: "taked", correct: "took" },
+    { regex: /\btelled\b/gi, replacement: "told", bad: "telled", correct: "told" },
+    { regex: /\bthinked\b/gi, replacement: "thought", bad: "thinked", correct: "thought" },
+    { regex: /\bunderstanded\b/gi, replacement: "understood", bad: "understanded", correct: "understood" },
+    { regex: /\bwinned\b/gi, replacement: "won", bad: "winned", correct: "won" },
+    { regex: /\bwrited\b/gi, replacement: "wrote", bad: "writed", correct: "wrote" },
+    { regex: /\bcosted\b/gi, replacement: "cost", bad: "costed", correct: "cost" },
+    { regex: /\bcutted\b/gi, replacement: "cut", bad: "cutted", correct: "cut" },
+    { regex: /\bhurted\b/gi, replacement: "hurt", bad: "hurted", correct: "hurt" }
+  ];
+
+  for (const vr of badRegularPast) {
+    if (vr.regex.test(corrected)) {
+      corrected = corrected.replace(vr.regex, vr.replacement);
+      isPerfect = false;
+      notes.push(`불규칙 동사 과거형 교정: "${vr.bad}"는 규칙 변화(-ed)가 아니라 불규칙 과거형 "${vr.correct}"로 씁니다.`);
+    }
+  }
+
+  // 4. Auxiliary / double past (didn't went -> didn't go, did you saw -> did you see)
+  const pastAfterDidnt = {
+    went: "go", saw: "see", bought: "buy", came: "come", had: "have",
+    took: "take", spoke: "speak", ate: "eat", wrote: "write", told: "tell",
+    made: "make", knew: "know", heard: "hear", left: "leave", met: "meet"
+  };
+  for (const [badPast, baseVerb] of Object.entries(pastAfterDidnt)) {
+    const reg = new RegExp(`\\b(didn'?t|did\\s+not|did\\s+[a-z]+\\s+not|did\\s+[a-z]+)\\s+${badPast}\\b`, "gi");
+    if (reg.test(corrected)) {
+      corrected = corrected.replace(reg, `$1 ${baseVerb}`);
+      isPerfect = false;
+      notes.push(`조동사 어법 교정: "did/didn't" 뒤에는 항상 동사원형("${baseVerb}")을 사용합니다.`);
+    }
+  }
+
+  // 5. Subject-Verb Agreement: (he/she/it have -> has, etc.)
+  if (/\b(he|she|it|my friend|my mom|my father|my sister|my brother|my boss)\s+have\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(he|she|it|my friend|my mom|my father|my sister|my brother|my boss)\s+have\b/gi, "$1 has");
+    isPerfect = false;
+    notes.push('주어-동사 수일치: 3인칭 단수 주어(he/she/it 등)에는 "have" 대신 "has"를 사용합니다.');
+  }
+
+  if (/\b(she|he|it)\s+don'?t\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(she|he|it)\s+don'?t\b/gi, "$1 doesn't");
+    isPerfect = false;
+    notes.push('주어-동사 수일치: 3인칭 단수 부정형은 "don\'t"가 아닌 "doesn\'t"를 사용합니다.');
+  }
+
+  if (/\b(she|he|it)\s+do\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(she|he|it)\s+do\b/gi, "$1 does");
+    isPerfect = false;
+    notes.push('주어-동사 수일치: 3인칭 단수 긍정형은 "do"가 아닌 "does"를 사용합니다.');
+  }
+
+  // 6. Past time marker with base verb ("yesterday I go" -> "yesterday I went")
+  if (/\b(yesterday|last\s+(?:night|week|month|year))\b/i.test(corrected)) {
+    const pastMap = {
+      go: "went", see: "saw", buy: "bought", eat: "ate", make: "made",
+      come: "came", take: "took", write: "wrote", have: "had", meet: "met"
+    };
+    for (const [base, past] of Object.entries(pastMap)) {
+      const pReg = new RegExp(`\\b(yesterday|last\\s+(?:night|week|month|year))\\s+([a-z]+\\s+)?${base}\\b`, "gi");
+      if (pReg.test(corrected)) {
+        corrected = corrected.replace(pReg, `$1 $2${past}`);
+        isPerfect = false;
+        notes.push(`시제 일치: 명확한 과거 시점(yesterday/last...) 부사와 함께 쓰일 때는 과거형 "${past}"를 사용합니다.`);
+      }
+    }
+  }
+
+  // 7. Collocation fixes: "have a trip" -> "take a trip" / "go on a trip"
   if (/\b(having|have|had)\s+a\s+trip\b/i.test(corrected)) {
     corrected = corrected
       .replace(/\bhaving\s+a\s+trip\b/gi, "taking a trip")
       .replace(/\bhave\s+a\s+trip\b/gi, "take a trip")
       .replace(/\bhad\s+a\s+trip\b/gi, "took a trip");
     isPerfect = false;
-    notes.push('Collocation fix: In English, we say "take a trip" or "go on a trip" rather than "have a trip".');
+    notes.push('자연스러운 연어(Collocation): 영어에서는 여행을 갈 때 "have a trip" 대신 "take a trip" 또는 "go on a trip"을 씁니다.');
   }
 
-  // 4. "to the [Name] city" -> "to [Name]" (e.g. "to the Chung-ju city" -> "to Chungju")
+  // 8. "to the [Name] city" -> "to [Name]" (e.g. "to the Chung-ju city" -> "to Chungju")
   if (/\bto\s+the\s+([A-Za-z\-]+)\s+city\b/i.test(corrected)) {
     corrected = corrected.replace(/\bto\s+the\s+([A-Za-z\-]+)\s+city\b/gi, (_, c) => {
       const cleanCity = c.replace(/-/g, "");
@@ -1783,255 +1888,93 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
       return `to ${formatted}`;
     });
     isPerfect = false;
-    notes.push('Proper noun fix: City names like "Chungju" do not require "the" or "city" after them ("to Chungju").');
+    notes.push('고유명사 표현: 도시 이름 앞에는 정관사 "the"나 뒤에 "city"를 붙이지 않고 간결하게 지명만 표기합니다.');
   }
 
-  // 5. "hows going" / "how is going" -> "how's it going?"
-  if (/\bhow'?s\s+going\b/i.test(corrected) || /\bhow\s+is\s+going\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bhow'?s\s+going\b/gi, "how's it going").replace(/\bhow\s+is\s+going\b/gi, "how's it going");
+  // 9. Missing articles before destination nouns: "go to supermarket/store/hospital"
+  if (/\b(go|goes|went|going|gone)\s+to\s+(supermarket|grocery\s+store|store|hospital|airport|station|bank|pharmacy|post\s+office|park|gym|doctor)\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(go|goes|went|going|gone)\s+to\s+(supermarket|grocery\s+store|store|hospital|airport|station|bank|pharmacy|post\s+office|park|gym|doctor)\b/gi, "$1 to the $2");
     isPerfect = false;
-    notes.push(`Grammar fix: The standard conversational phrase requires the pronoun "it": use "how's it going?" instead of "hows going".`);
+    notes.push('관사 누락 보완: 특정 목적지 장소 앞에는 정관사 "the"를 붙여 표기합니다 (예: "to the supermarket").');
   }
 
-  // 6. "by walk" -> "on foot"
-  if (/\bby\s+walk\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bby\s+walk\b/gi, "on foot");
+  // "go to home" -> "go home"
+  if (/\b(go|goes|went|going|gone)\s+to\s+home\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(go|goes|went|going|gone)\s+to\s+home\b/gi, "$1 home");
     isPerfect = false;
-    notes.push(`Collocation fix: In English, walking to a place is expressed as "on foot" or using the verb "walk" ("I walked to work").`);
-  }
-
-  // 7. "every days" -> "every day"
-  if (/\bevery\s+days\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bevery\s+days\b/gi, "every day");
-    isPerfect = false;
-    notes.push(`Determiner fix: "Every" is followed by a singular countable noun ("every day", not "every days").`);
-  }
-
-  // 8. "she don't" / "he don't" -> doesn't
-  if (/\b(she|he|it)\s+don'?t\b/i.test(corrected)) {
-    corrected = corrected.replace(/\b(she|he|it)\s+don'?t\b/gi, "$1 doesn't");
-    isPerfect = false;
-    notes.push(`Subject-verb agreement: Third-person singular subjects (he/she/it) require "doesn't", not "don't".`);
-  }
-
-  // 9. Past tense marker with base verb ("yesterday I go" -> "yesterday I went")
-  if (/\b(yesterday|last\s+(?:night|week|month|year))\b/i.test(corrected)) {
-    const pastMap = { go: "went", see: "saw", buy: "bought", eat: "ate", make: "made", come: "came", take: "took", write: "wrote" };
-    for (const [base, past] of Object.entries(pastMap)) {
-      const pReg = new RegExp(`\\b(yesterday|last\\s+(?:night|week|month|year))\\s+([a-z]+\\s+)?${base}\\b`, "gi");
-      if (pReg.test(corrected)) {
-        corrected = corrected.replace(pReg, `$1 $2${past}`);
-        isPerfect = false;
-        notes.push(`Tense fix: Use the past tense "${past}" when referring to a past time marker like "yesterday".`);
-      }
-    }
+    notes.push('전치사 제거: "home"은 방향을 나타내는 부사이므로 앞에 "to"를 붙이지 않고 "go home"으로 씁니다.');
   }
 
   // 10. Number + singular noun ("two apple" -> "two apples")
-  if (/\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(apple|car|book|friend|day|hour|dollar|problem|student)\b/i.test(corrected)) {
-    corrected = corrected.replace(
-      /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(apple|car|book|friend|day|hour|dollar|problem|student)\b/gi,
-      "$1 $2s"
-    );
+  const pluralNounsRegex = /\b(two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(apple|car|book|friend|day|hour|dollar|problem|student|person|year|month)\b/gi;
+  if (pluralNounsRegex.test(corrected)) {
+    corrected = corrected.replace(pluralNounsRegex, (match, num, noun) => {
+      if (noun.toLowerCase() === "person") return `${num} people`;
+      return `${num} ${noun}s`;
+    });
     isPerfect = false;
-    notes.push(`Plural noun fix: Numbers greater than one require a plural noun ending in "-s".`);
+    notes.push('명사 복수형: 2 이상의 수사 뒤에 오는 가산명사는 복수형(-s/people)으로 일치시킵니다.');
   }
 
-  // 11. "I depressed by the time when I couldn't speak English well in my friend's wedding." & emotional/event grammar fixes
-  if (/\bi\s+(depressed|embarrassed|frustrated|disappointed|ashamed|exhausted|confused)\b/i.test(corrected)) {
-    corrected = corrected.replace(
-      /\bi\s+(depressed|embarrassed|frustrated|disappointed|ashamed|exhausted|confused)\b/gi,
-      (_, adj) => `I felt ${adj.toLowerCase()}`
-    );
+  // 11. Konglish & Adjective fixes
+  // "I am boring" -> "I am bored"
+  if (/\b(i am|i'm)\s+boring\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(i am|i'm)\s+boring\b/gi, "$1 bored");
     isPerfect = false;
-    notes.push(`Verb & adjective fix: "${RegExp.$1 || "depressed"}" is an adjective describing how you felt, so use "I felt depressed" or "I was depressed" instead of "I depressed".`);
-  }
-  if (/\bby the time when\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bby the time when\b/gi, "when");
-    isPerfect = false;
-    notes.push(`Conjunction fix: use simply "when" (or "at the time when") instead of "by the time when".`);
-  }
-  if (/\bhad a depressed time\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bhad a depressed time\b/gi, "felt really depressed");
-    isPerfect = false;
-    notes.push(`Word choice fix: people feel "depressed", while a time or experience is "depressing" (or simply say "I felt really depressed / down").`);
-  }
-  if (/\b(in|on)\s+(my\s+|a\s+|the\s+)?(friend'?s?\s+)?(wedding|party|concert|ceremony|meeting|interview)\b/i.test(corrected)) {
-    corrected = corrected.replace(
-      /\b(in|on)\s+(my\s+|a\s+|the\s+)?(friend'?s?\s+)?(wedding|party|concert|ceremony|meeting|interview)\b/gi,
-      (_, _prep, det = "", friendPart = "", eventWord) => {
-        const cleanFriend = friendPart ? (friendPart.trim().replace(/friend$/i, "friend's") + " ") : "";
-        return `at ${det || ""}${cleanFriend}${eventWord}`;
-      }
-    );
-    isPerfect = false;
-    notes.push(`Preposition fix: use "at a wedding / at a party / at a meeting" rather than "in my friend's wedding", and make sure "friend's" includes the apostrophe-s to show possession.`);
+    notes.push('감정 형용사: 주어 자신이 지루함을 느낄 때는 수동 형태의 감정 분사 "bored"를 사용합니다 ("boring"은 남을 지루하게 만드는 사람/사물).');
   }
 
-  // 12. "This tool is impressive for me. Because I made it with agy." & related patterns
-  if (/\bimpressive\s+for\s+me\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bimpressive\s+for\s+me\b/gi, "impressive to me");
+  // "I am agree" -> "I agree"
+  if (/\b(i am|i'm)\s+agree\b/i.test(corrected)) {
+    corrected = corrected.replace(/\b(i am|i'm)\s+agree\b/gi, "I agree");
     isPerfect = false;
-    notes.push(`Preposition fix: use "impressive to me" instead of "impressive for me".`);
+    notes.push('"agree"는 동사이므로 be동사 없이 "I agree"로 바로 표현합니다.');
   }
-  if (/([a-z0-9])\s*\\.\s+Because\s+/i.test(corrected)) {
-    corrected = corrected.replace(/([a-z0-9])\s*\\.\s+Because\s+/gi, "$1 because ");
+
+  // "by walk" -> "on foot"
+  if (/\bby\s+walk\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bby\s+walk\b/gi, "on foot");
     isPerfect = false;
-    notes.push(`Sentence structure fix: "because..." is a dependent clause—connect it directly to the main sentence without a period before "because".`);
-  }
-  if (/\bagy\b/.test(corrected)) {
-    corrected = corrected.replace(/\bagy\b/g, "AGY");
+    notes.push('수단 전치사: 걸어서 이동할 때는 "by walk"가 아니라 "on foot" 또는 동사 "walk"를 씁니다.');
   }
 
-  // 13. "I'm spending time for this around 3 hours."
-  if (
-    /\bi('m|\s+am)\s+spending\s+time\s+(?:for|on)\s+(this|it|that|[a-z\s]+?)\s+(around|about|for)?\s*(\d+|one|two|three|four|five|six|seven|eight|a few|several)\s+(hour|hours|minute|minutes|day|days)\b/i.test(
-      corrected
-    )
-  ) {
-    corrected = corrected.replace(
-      /\bi('m|\s+am)\s+spending\s+time\s+(?:for|on)\s+(this|it|that|[a-z\s]+?)\s+(around|about|for)?\s*(\d+|one|two|three|four|five|six|seven|eight|a few|several)\s+(hour|hours|minute|minutes|day|days)\b/gi,
-      (_, amPart, target, approx, num, unit) =>
-        `I${amPart} spending ${approx ? approx.toLowerCase() : "about"} ${num} ${unit} on ${target.trim()}`
-    );
+  // "every days" -> "every day"
+  if (/\bevery\s+days\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bevery\s+days\b/gi, "every day");
     isPerfect = false;
-    notes.push(
-      `Word order & preposition fix: place the duration ("around 3 hours") directly after "spending", and use "on" ("on this") instead of "for this".`
-    );
-  } else if (/\b(spend|spending|spent|spends)\s+time\s+for\s+([^,.!?]+)/i.test(corrected)) {
-    corrected = corrected.replace(/\b(spend|spending|spent|spends)\s+time\s+for\s+/gi, "$1 time on ");
+    notes.push('"every" 뒤에는 항상 단수 명사가 오므로 "every day"가 맞습니다.');
+  }
+
+  // "discuss about" -> "discuss"
+  if (/\bdiscuss\s+about\b/i.test(corrected)) {
+    corrected = corrected.replace(/\bdiscuss\s+about\b/gi, "discuss");
     isPerfect = false;
-    notes.push(`Preposition fix: use "spend time ON something" instead of "spend time for".`);
+    notes.push('"discuss"는 타동사이므로 전치사 "about" 없이 바로 목적어를 취합니다.');
   }
 
-  // 14. "Your speed is a little fast to me. Please slow down and speak more simple sentences."
-  if (/\b(fast|slow|hard|difficult|easy)\s+to\s+me\b/i.test(corrected)) {
-    corrected = corrected.replace(/\b(fast|slow|hard|difficult|easy)\s+to\s+me\b/gi, "$1 for me");
+  // "look forward to see" -> "look forward to seeing"
+  if (/\blook\s+forward\s+to\s+see\b/i.test(corrected)) {
+    corrected = corrected.replace(/\blook\s+forward\s+to\s+see\b/gi, "look forward to seeing");
     isPerfect = false;
-    notes.push(`Preposition fix: with adjectives of speed or difficulty (fast, slow, hard, easy), use "for me" ("fast for me") instead of "to me".`);
+    notes.push('"look forward to"의 "to"는 전치사이므로 뒤에 동명사(-ing)가 옵니다.');
   }
 
-  // Comparative fixes: "more simple" -> "simpler", etc.
-  const comparativeFixes = [
-    { regex: /\bmore\s+simple\b/gi, replacement: "simpler", word: '"more simple" → "simpler"' },
-    { regex: /\bmore\s+easy\b/gi, replacement: "easier", word: '"more easy" → "easier"' },
-    { regex: /\bmore\s+fast\b/gi, replacement: "faster", word: '"more fast" → "faster"' },
-    { regex: /\bmore\s+slow\b/gi, replacement: "slower", word: '"more slow" → "slower" (or "more slowly" as an adverb)' },
-    { regex: /\bmore\s+short\b/gi, replacement: "shorter", word: '"more short" → "shorter"' },
-    { regex: /\bmore\s+long\b/gi, replacement: "longer", word: '"more long" → "longer"' },
-    { regex: /\bmore\s+clear\b/gi, replacement: "clearer", word: '"more clear" → "clearer"' },
-    { regex: /\bmore\s+hard\b/gi, replacement: "harder", word: '"more hard" → "harder"' }
-  ];
-  for (const cf of comparativeFixes) {
-    if (cf.regex.test(corrected)) {
-      corrected = corrected.replace(cf.regex, cf.replacement);
-      isPerfect = false;
-      notes.push(`Comparative fix: use ${cf.word}.`);
-    }
-  }
-
-  if (/\bspeak\s+(simpler|simple|shorter|short|easier|easy)\s+sentences\b/i.test(corrected)) {
-    corrected = corrected.replace(
-      /\bspeak\s+(simpler|simple|shorter|short|easier|easy)\s+sentences\b/gi,
-      "speak in $1 sentences"
-    );
-    isPerfect = false;
-    notes.push(`Grammar fix: add "in" after "speak" ("speak in simpler sentences") or use the verb "use" ("use simpler sentences").`);
-  }
-
-  // 15. "I'm on vibe coding" -> "I'm vibe coding"
-  if (/\bi'm\s+on\s+vibe\s+coding\b/i.test(corrected)) {
-    corrected = corrected.replace(/\bi'm\s+on\s+vibe\s+coding\b/gi, "I'm vibe coding");
-    isPerfect = false;
-    notes.push(`Drop "on" before "vibe coding"—use "I'm vibe coding" or "I'm doing some vibe coding".`);
-  }
-
-  // 16. "about the project about X" (repeated about)
-  if (/\babout\s+([^,.!?]+?)\s+about\s+([^,.!?]+)/i.test(corrected)) {
-    corrected = corrected.replace(
-      /\babout\s+([^,.!?]+?)\s+about\s+(the\s+)?([^,.!?]+)/i,
-      "about $1 on the $3"
-    );
-    isPerfect = false;
-    notes.push(
-      `Using "about" twice in a row sounds repetitive. Replace the second "about" with "on" ("the project on the stablecoin market").`
-    );
-  }
-
-  // 17. Missing "the" before "stablecoin market"
-  if (/\b(on|about|in)\s+stablecoin\s+market\b/i.test(corrected)) {
-    corrected = corrected.replace(/\b(on|about|in)\s+stablecoin\s+market\b/gi, "$1 the stablecoin market");
-    isPerfect = false;
-    notes.push(`Add "the" before specific market sectors like "the stablecoin market".`);
-  }
-
-  // 18. Broad ESL Rules (agree, discuss, explain, etc.)
-  const eslPatterns = [
-    { regex: /\bi am agree\b/gi, replace: "I completely agree", note: `"Agree" is an action verb, not an adjective—say "I agree" rather than "I am agree".` },
-    { regex: /\bdiscuss about\b/gi, replace: "discuss", note: `"Discuss" already means "talk about", so it takes a direct object without "about".` },
-    { regex: /\bexplain me\b/gi, replace: "explain to me", note: `Always use "to" before the person with "explain" ("explain it to me").` },
-    { regex: /\brecommend me\b/gi, replace: "recommend to me", note: `Use "recommend [something] to me" rather than "recommend me".` },
-    { regex: /\blisten music\b/gi, replace: "listen to music", note: `Always include "to" after "listen" ("listen to music").` },
-    { regex: /\bgo to (home|downtown|abroad)\b/gi, replace: "go $1", note: `Adverbs of place like "home", "downtown", and "abroad" don't use "to" after "go" ("go home").` },
-    { regex: /\bhow do you think about\b/gi, replace: "what do you think about", note: `When asking for someone's opinion, say "What do you think about...?" instead of "How do you think about...?".` },
-    { regex: /\bvery (like|love|enjoy|appreciate)\b/gi, replace: "really $1", note: `"Very" cannot modify verbs directly in English—use "really" before verbs ("really like").` },
-    { regex: /\bmore better\b/gi, replace: "much better", note: `"Better" is already comparative; strengthen it with "much better".` },
-    { regex: /\binformations\b/gi, replace: "information", note: `"Information" is an uncountable noun and never takes an "-s".` }
-  ];
-
-  for (const rule of eslPatterns) {
-    if (rule.regex.test(corrected)) {
-      corrected = corrected.replace(rule.regex, rule.replace);
-      isPerfect = false;
-      notes.push(rule.note);
-    }
-  }
-
-  // 19. Gibberish & Unknown Token Guard (CRITICAL!)
-  // If words contain non-vowel gibberish, broken characters, or single-consonant fragments, FLAG IMMEDIATELY!
-  const rawWords = rawOriginal.split(/\s+/).filter(Boolean);
-  for (const rw of rawWords) {
-    const cleanWord = rw.replace(/[^a-zA-Z']/g, "").toLowerCase();
-    if (!cleanWord) continue;
-    // Length >= 3 without a single vowel (a, e, i, o, u, y) -> gibberish like 'zxcv', 'qwrt', 'undesodn'
-    if (cleanWord.length >= 3 && !/[aeiouy]/.test(cleanWord)) {
-      isPerfect = false;
-      notes.push(`Typo or unrecognized word: "${rw}" does not appear to be a standard English word.`);
-    } else if (cleanWord.length === 1 && !["a", "i"].includes(cleanWord)) {
-      // Single letter like 'n', 's', 'b', 'd' that isn't 'a' or 'I'
-      isPerfect = false;
-      notes.push(`Incomplete token: isolated letter "${rw}" is not a valid word.`);
-    }
-  }
-
-  // Clean spacing before punctuation
-  corrected = corrected.replace(/\s+([.!?])/g, "$1").trim();
-
-  // Capitalize first letter
-  if (corrected.length > 0 && /^[a-z]/.test(corrected)) {
+  // 12. Spacing and Punctuation
+  corrected = corrected.replace(/\s+([.,!?])/g, "$1").trim();
+  if (corrected.length > 0) {
     corrected = corrected.charAt(0).toUpperCase() + corrected.slice(1);
-  }
-  // Ensure ending punctuation
-  if (corrected.length > 0 && !/[.!?]$/.test(corrected)) {
-    const isQ = /^(can|could|would|should|will|do|does|did|is|are|was|were|what|why|how|where|when|who)\b/i.test(corrected);
-    corrected += isQ ? "?" : ".";
+    if (!/[.!?]$/.test(corrected)) {
+      const isQ = /^(can|could|would|should|will|do|does|did|is|are|was|were|what|why|how|where|when|who)\b/i.test(corrected);
+      corrected += isQ ? "?" : ".";
+    }
   }
 
-  // 20. Coaching Note When No Hard Grammar Errors Detected
-  const stripPunct = (s) => s.replace(/[.!?]+$/g, "").trim().toLowerCase();
   if (notes.length === 0) {
-    const lowerClean = stripPunct(corrected);
-    if (/^(hi|hello|hey)( there)?[,.\s]*who are you$/i.test(lowerClean)) {
-      notes.push(`"${corrected}" is grammatically correct! In casual conversation, adding "could you introduce yourself?" sounds even warmer.`);
-    } else if (/^i want to talk about (.+)$/i.test(lowerClean)) {
-      notes.push(`Your sentence "${corrected}" is grammatically accurate! You can also soften "I want to..." into "I'd like to..." or "Let's chat about..." (see recommendations below).`);
-    } else {
-      notes.push(`Your sentence "${corrected}" is grammatically accurate! Check the recommended expressions below for additional natural native phrasings.`);
-    }
+    notes.push(`문장이 문법적으로 정확합니다! 아래의 원어민 추천 표현들도 함께 연습해 보세요.`);
   }
 
   const explanation = notes.join(" ");
-  const correctedVariants = buildCorrectedSentenceVariants(rawOriginal, corrected);
+  const correctedVariants = buildCorrectedSentenceVariants(rawOriginal, corrected, isPerfect);
 
   return {
     corrected,
@@ -2042,13 +1985,13 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
   };
 }
 
-function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
+function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect) {
   const lower = rawOriginal.trim().toLowerCase();
 
   // 1. "I don't understand" / clarification / typo like "I do n undesodn ao that"
   if (/undesodn|understand|don'?t\s+get|what\s+do\s+you\s+mean|didn'?t\s+catch/i.test(lower)) {
     return [
-      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: "I don't understand that." },
       { label: "추천 1 · Casual Native", sentence: "I didn't quite catch that—could you say it again?" },
       { label: "추천 2 · Fluent & Expressive", sentence: "I'm not entirely following—could you explain that a bit more simply?" }
     ];
@@ -2058,28 +2001,26 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
   if (/trip|chung-?ju|travel|vacation/i.test(lower)) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: "I'm going on a family trip down to Chungju." },
-      { label: "추천 2 · Fluent & Expressive", sentence: "My family and I are taking a vacation to Chungju together." }
+      { label: "추천 1 · Casual Native", sentence: "I'm heading on a family trip down to Chungju." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "My family and I are taking a weekend getaway to Chungju." }
     ];
   }
 
-  // 3. Building tool with AGY / impressive
-  if (/impressive.*agy|made it with agy|built it with agy/i.test(lower)) {
+  // 3. Supermarket / shopping / yesterday
+  if (/supermarket|grocery|store|apple|buyed|bought/i.test(lower)) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: "I'm really impressed with this tool because I built it myself with AGY." },
-      { label: "추천 2 · Fluent & Expressive", sentence: "What makes this tool so impressive to me is that I created it using AGY." }
+      { label: "추천 1 · Casual Native", sentence: "She ran to the supermarket yesterday and picked up a couple of apples." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "She went to the grocery store yesterday to purchase some fresh apples." }
     ];
   }
 
-  // 4. Spending time / duration
-  if (/\b(spend|spending|spent)\s+time\b/i.test(lower) || /\b(\d+|one|two|three|four|five)\s*(hour|hours|minute|minutes)\b/i.test(lower)) {
-    const durMatch = lower.match(/\b(\d+|one|two|three|four|five|six|a few)\s*(hour|hours|minute|minutes|day|days)\b/i);
-    const dur = durMatch ? `${durMatch[1]} ${durMatch[2]}` : "about 3 hours";
+  // 4. Bored / emotional feelings
+  if (/boring|bored|tired|exhausted/i.test(lower)) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: `I've spent around ${dur} on this so far.` },
-      { label: "추천 2 · Fluent & Expressive", sentence: `I've been working on this for about ${dur} now.` }
+      { label: "추천 1 · Casual Native", sentence: "I'm feeling pretty bored today and looking for something fun to do." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "I've got some free time today and find myself feeling a bit restless." }
     ];
   }
 
@@ -2092,114 +2033,135 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected) {
     ];
   }
 
-  // 6. Weather topic
-  if (/talk about.*weather|chat about.*weather/i.test(lower)) {
-    return [
-      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: "I'd like to chat about the weather today." },
-      { label: "추천 2 · Fluent & Expressive", sentence: "Let's talk about the weather—how are conditions where you are?" }
-    ];
-  }
-
-  // 7. Library / location
-  if (/\blibrary\b|\blibary\b/i.test(lower)) {
-    return [
-      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: "I'm at the library right now getting some reading done." },
-      { label: "추천 2 · Fluent & Descriptive", sentence: "I came to the library today to focus in a quiet environment." }
-    ];
-  }
-
-  // 8. General fallback
+  // General intelligent variants
   const core = primaryCorrected.replace(/[.!?]+$/, "").trim();
-  const coreLowerFirst = core.length > 1 ? core.charAt(0).toLowerCase() + core.slice(1) : core.toLowerCase();
-  const isQuestion = /\\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
+  const isQuestion = /\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
 
   if (isQuestion) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: `Quick question—${coreLowerFirst}?` },
-      { label: "추천 2 · Polite & Fluent", sentence: `Just out of curiosity, ${coreLowerFirst}?` }
+      { label: "추천 1 · Casual Native", sentence: `Could you tell me, ${core.charAt(0).toLowerCase() + core.slice(1)}?` },
+      { label: "추천 2 · Fluent & Expressive", sentence: `I was wondering, ${core.charAt(0).toLowerCase() + core.slice(1)}?` }
     ];
   }
 
   return [
     { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-    { label: "추천 1 · Casual Native", sentence: `To be honest, ${coreLowerFirst}.` },
-    { label: "추천 2 · Fluent & Expressive", sentence: `What I mean is that ${coreLowerFirst}.` }
+    { label: "추천 1 · Casual Native", sentence: `Actually, ${core.charAt(0).toLowerCase() + core.slice(1)}.` },
+    { label: "추천 2 · Fluent & Expressive", sentence: `To put it another way, ${core.charAt(0).toLowerCase() + core.slice(1)}.` }
   ];
 }
 
+
 function generateContextualReply(userMessage, modelId, scenarioTitle, partnerName, history, grammarResult) {
-  const rawClean = userMessage.trim();
-  const clean = grammarResult.corrected;
-  const lower = rawClean.toLowerCase();
-  const modelMeta = MODEL_PERSONAS[modelId] || MODEL_PERSONAS["gemini-4-argon"];
+  const rawClean = (userMessage || "").trim();
+  const clean = grammarResult.corrected || rawClean;
+  const lower = clean.toLowerCase();
+  const modelMeta = (typeof MODEL_PERSONAS !== "undefined" && MODEL_PERSONAS[modelId]) ? MODEL_PERSONAS[modelId] : null;
 
   let reply = "";
-  let followUpHint = "That makes sense! Let me share a little more about that.";
-  let betterExpressions = grammarResult.correctedVariants?.slice(1)?.map(v => ({ tone: v.label, phrase: v.sentence })) || [];
+  let followUpHint = "That sounds great! Let me share a little more about that.";
+  let betterExpressions = (grammarResult.correctedVariants && grammarResult.correctedVariants.slice(1).map(v => ({ tone: v.label, phrase: v.sentence }))) || [];
   let pronunciationTips = [];
   let keyVocabulary = [];
   let recommendedSpeechRate = null;
 
-  // 1. CLARIFICATION / "I don't understand" / "I do n undesodn ao that"
-  if (/undesodn|understand|don'?t\s+get|what\s+do\s+you\s+mean|didn'?t\s+catch|pardon|repeat/i.test(lower)) {
-    reply = `No problem at all! I can explain it more simply. Earlier we were chatting about your trip to Chungju with your family—what kind of fun activities or sightseeing are you planning to do there?`;
-    followUpHint = "We're planning to take a walk around the lake and try some delicious local food.";
+  // 1. Clarification / "I don't understand" / "I didn't catch that"
+  if (/undesodn|understand|don'?t\s+get|what\s+do\s+you\s+mean|didn'?t\s+catch|pardon|repeat|say\s+again/i.test(lower)) {
+    reply = `No worries at all! Let me slow down and rephrase. Which part would you like me to explain more simply?`;
+    followUpHint = "Could you explain the last question one more time with simpler words?";
     pronunciationTips = [
-      { word: "Understand (ˌʌn.dɚˈstænd)", tip: "Place the primary pitch and volume stress on the final syllable 'STAND'." },
-      { word: "Catch that (kætʃ ðæt)", tip: "Link the final /tʃ/ smoothly into the 'th' sound of 'that'." }
+      { word: "Understand (ˌʌn.dɚˈstænd)", tip: "Stress the last syllable clearly: 'un-der-STAND'." },
+      { word: "Explain (ɪkˈspleɪn)", tip: "Link the 'k' and 'sp' smoothly without adding extra vowels." }
     ];
     keyVocabulary = [
-      { word: "catch that", meaning: "To hear or understand what someone said clearly." },
-      { word: "break it down", meaning: "To explain something complex in smaller, simpler steps." }
+      { word: "break down", meaning: "To explain something complex in simpler parts." },
+      { word: "catch that", meaning: "To hear or understand what was said." }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 2. TRAVEL / TRIP TO CHUNGJU
-  if (/trip|chung-?ju|travel|vacation/i.test(lower)) {
-    reply = `That sounds like a wonderful family trip! Chungju is famous for its scenic lake, relaxing hot springs, and nature. What are you most excited to do with your family while you're there?`;
-    followUpHint = "I'm really looking forward to relaxing by the lake and eating good food with my family.";
+  // 2. Travel & Vacation (e.g. Chungju, trips, flights)
+  if (/trip|travel|vacation|chung-?ju|flight|hotel|tour|sightseeing|beach|mountains/i.test(lower)) {
+    reply = `Traveling is always such a refreshing experience! What are you most excited to see or do on your trip?`;
+    followUpHint = "I'm really looking forward to sightseeing, trying good local food, and relaxing with my family.";
     pronunciationTips = [
-      { word: "Trip (trɪp)", tip: "Keep the 'i' sound short and relaxed (/ɪ/), not a long 'ee' sound." },
-      { word: "Scenic (ˈsiː.nɪk)", tip: "Stress the first syllable: 'SEE-nik'." }
+      { word: "Scenic (ˈsiː.nɪk)", tip: "Start with a soft 's' and stress the first syllable: 'SEE-nik'." },
+      { word: "Vacation (veɪˈkeɪ.ʃən)", tip: "Keep the middle syllable stressed: 'vay-KAY-shun'." }
     ];
     keyVocabulary = [
-      { word: "take a trip", meaning: "To travel somewhere for a short visit or vacation." },
+      { word: "getaway", meaning: "A short vacation or holiday." },
       { word: "sightseeing", meaning: "Visiting interesting places as a tourist." }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 3. VOICE SPEED / SLOW DOWN
-  if (/\b(speak\s+(more\s+)?slow(ly|er)?|slow\s+down|too\s+fast|speed\s+is\s+.*fast|fast\s+(to|for)\s+me|simpler\s+sentences)\b/i.test(lower)) {
-    recommendedSpeechRate = 0.85;
-    reply = `Of course! I just slowed down my speaking pace for you. I will use short, simple sentences so everything is easy to follow. How does this pace feel?`;
-    followUpHint = "Thank you, this speed is much easier for me to understand.";
+  // 3. Food, Cooking & Dining (e.g. pizza, pasta, dinner, supermarket, grocery)
+  if (/food|cook|cooked|cooking|dinner|lunch|breakfast|eat|ate|pizza|pasta|supermarket|grocery|restaurant|delicious|meal/i.test(lower)) {
+    reply = `That sounds delicious! Did you make it yourself with a special recipe, or did you try it at a favorite spot?`;
+    followUpHint = "I made it at home with fresh ingredients, and it turned out really flavorful.";
+    pronunciationTips = [
+      { word: "Delicious (dɪˈlɪʃ.əs)", tip: "Soft 'sh' sound in the middle: 'dih-LISH-us'." },
+      { word: "Recipe (ˈres.ə.pi)", tip: "Three syllables: 'REH-suh-pee'." }
+    ];
+    keyVocabulary = [
+      { word: "from scratch", meaning: "Made completely from raw ingredients without shortcuts." },
+      { word: "flavorful", meaning: "Full of rich, enjoyable taste." }
+    ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 4. SELF-INTRODUCTION ("Who are you?")
-  if (/who are you|what is your name|what's your name|introduce yourself/i.test(lower)) {
-    reply = `Hi there! I'm ${partnerName}, your English speaking partner today. What would you love to talk about together—your hobbies, travel, or everyday life?`;
-    followUpHint = `Nice to meet you, ${partnerName}! I'd love to chat about everyday life and travel.`;
-    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
+  // 4. Work, Coding, Tech & AI
+  if (/work|job|coding|code|developer|project|software|agent|tech|ai|study|studying|meeting/i.test(lower)) {
+    reply = `Sounds like you've been working on something fascinating! What's the most exciting challenge you're tackling right now?`;
+    followUpHint = "I've been building a project using AI tools, and it's making my workflow much faster.";
+    pronunciationTips = [
+      { word: "Develop (dɪˈvel.əp)", tip: "Stress the second syllable: 'dih-VEL-up'." },
+      { word: "Challenge (ˈtʃæl.ɪndʒ)", tip: "Clear 'ch' sound at the beginning: 'CHAL-inj'." }
+    ];
+    keyVocabulary = [
+      { word: "workflow", meaning: "The sequence of steps in a work process." },
+      { word: "hands-on", meaning: "Practical, active involvement in doing something." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 5. GREETING ("Hi", "Hello")
-  if (/^(hi|hello|hey|good morning|good afternoon|good evening|hi there|hello there)[.!?]*$/i.test(lower)) {
-    reply = `Hey! I'm ${partnerName}. It's great to chat with you today! How has your day been going so far?`;
-    followUpHint = "My day has been going well! I'm taking some time to practice my English speaking.";
-    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
+  // 5. Feelings, Boredom, Relaxation & Weekend
+  if (/bored|boring|tired|exhausted|relax|relaxing|weekend|free time|rest|sleep/i.test(lower)) {
+    reply = `I completely understand how you feel. When you have downtime like this, what's your favorite way to unwind and recharge?`;
+    followUpHint = "I usually like listening to music, going for a walk, or catching up on sleep.";
+    pronunciationTips = [
+      { word: "Unwind (ʌnˈwaɪnd)", tip: "Long 'eye' sound: 'un-WYND'." },
+      { word: "Recharge (riːˈtʃɑːrdʒ)", tip: "Stress the second syllable: 'ree-CHARJ'." }
+    ];
+    keyVocabulary = [
+      { word: "unwind", meaning: "To relax after a period of work or stress." },
+      { word: "downtime", meaning: "Time spent relaxing and resting." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 6. GENERAL CONTEXTUAL FALLBACK
-  reply = `That's really interesting! Could you tell me a little more about that, or what made you think about it?`;
-  followUpHint = "Sure! Let me share a little more context about what I mean.";
-  return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary };
+  // 6. User asks a question (Why, How, What, Can you, Do you)
+  if (/\?$/.test(clean) || /^(what|how|why|when|where|who|can you|could you|do you|are you)/i.test(clean)) {
+    reply = `That's a thoughtful question! I really enjoy helping people build confidence in English while sharing fun cultural insights. What inspired you to ask about that?`;
+    followUpHint = "I'm always curious to learn new perspectives and practice asking questions naturally.";
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
+  }
+
+  // 7. General Dynamic Contextual Fallback (Rotating & Topic Aware)
+  const dynamicReplies = [
+    `That gives a great glimpse into your day! What was the most interesting or memorable part of that for you?`,
+    `I love hearing about that! How did everything turn out in the end?`,
+    `That sounds like a meaningful experience. What are you planning to do next with that?`,
+    `That's really cool! Have you always enjoyed doing that, or is it something relatively new for you?`
+  ];
+  const charHash = clean.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  reply = dynamicReplies[charHash % dynamicReplies.length];
+  followUpHint = "It was a really nice experience, and I'm happy I got to try something new today.";
+
+  return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
 }
+
 
 
 function generateLocalDemoCoaching(userText) {
@@ -2310,7 +2272,7 @@ async function handleSendUserMessage(overrideText = null) {
       } else {
         try {
           const controller = new AbortController();
-          const tId = setTimeout(() => controller.abort(), 3000);
+          const tId = setTimeout(() => controller.abort(), 8500);
           result = await callZeroKeyBackendChatAPI(text, controller.signal);
           clearTimeout(tId);
         } catch (proxyErr) {
