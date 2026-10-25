@@ -613,8 +613,10 @@ export default {
         let finalIsPerfect = grammarResult.isPerfect;
         let finalVariants = grammarResult.correctedVariants;
 
+        let aiDebugInfo = { hasEnvAI: Boolean(env && env.AI), called: false, error: null };
         // If Workers AI is available in env, query Llama 3.1 8B on Cloudflare GPU edge!
         if (env && env.AI) {
+          aiDebugInfo.called = true;
           try {
             const aiPrompt = `You are a warm English conversation partner named ${partnerName} and an ESL grammar coach.
 Scenario: "${scenarioTitle}".
@@ -665,6 +667,7 @@ Respond ONLY with a JSON object:
         }
 
         const responsePayload = {
+          _debug: { hasEnvAI: Boolean(env && env.AI), aiDebug: aiDebugInfo },
           reply: finalReply,
           follow_up_hint: finalHint,
           is_grammar_perfect: finalIsPerfect,
