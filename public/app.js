@@ -1761,9 +1761,9 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
   if (/\b(yesterday|last\s+(?:night|week|month|year))\b/i.test(corrected)) {
     const pastMap = { go: "went", see: "saw", buy: "bought", eat: "ate", make: "made", come: "came", take: "took", write: "wrote" };
     for (const [base, past] of Object.entries(pastMap)) {
-      const pReg = new RegExp(`(\b(?:yesterday|last\s+(?:night|week|month|year))\b[\s\w]*?\b)(${base})\b`, "gi");
+      const pReg = new RegExp(`\b(yesterday|last\s+(?:night|week|month|year))\s+([a-z]+\s+)?${base}\b`, "gi");
       if (pReg.test(corrected)) {
-        corrected = corrected.replace(pReg, `$1${past}`);
+        corrected = corrected.replace(pReg, `$1 $2${past}`);
         isPerfect = false;
         notes.push(`Tense fix: Use the past tense "${past}" when referring to a past time marker like "yesterday".`);
       }
