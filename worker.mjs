@@ -648,10 +648,10 @@ Respond ONLY with a JSON object:
               try {
                 aiRes = await env.AI.run(m, {
                   messages: [{ role: "user", content: aiPrompt }],
-                  max_tokens: 384,
+                  max_tokens: 450,
                   temperature: 0.3
                 });
-                if (aiRes && (aiRes.response || typeof aiRes === "string")) {
+                if (aiRes && (aiRes.response || aiRes.choices || typeof aiRes === "string")) {
                   usedModel = m;
                   break;
                 }
@@ -664,26 +664,48 @@ Respond ONLY with a JSON object:
               throw new Error(lastErr);
             }
             aiDebugInfo.raw = aiRes;
-            const textContent = (aiRes && (aiRes.response || (typeof aiRes === "string" ? aiRes : JSON.stringify(aiRes)))) || "";
-            if (textContent) {
-              const cleaned = textContent.replace(/```json/gi, "").replace(/```/g, "").trim();
-              const s = cleaned.indexOf("{");
-              const e = cleaned.lastIndexOf("}");
-              if (s !== -1 && e > s) {
-                const parsed = JSON.parse(cleaned.slice(s, e + 1));
-                if (parsed.reply) finalReply = parsed.reply;
-                if (parsed.follow_up_hint) finalHint = parsed.follow_up_hint;
-                if (parsed.direct_fix && !grammarResult.isPerfect) {
-                  finalDirectFix = parsed.direct_fix;
-                  finalVariants = [
-                    { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: finalDirectFix },
-                    { label: "추천 1 · Casual Native", sentence: parsed.casual_native || finalVariants[1]?.sentence || finalDirectFix },
-                    { label: "추천 2 · Fluent & Expressive", sentence: parsed.fluent_polite || finalVariants[2]?.sentence || finalDirectFix }
-                  ];
+
+            let parsed = null;
+            if (aiRes) {
+              if (aiRes.response && typeof aiRes.response === "object") {
+                parsed = aiRes.response;
+              } else {
+                const rawText = (aiRes.choices && aiRes.choices[0] && aiRes.choices[0].message && aiRes.choices[0].message.content) ||
+                                (typeof aiRes.response === "string" ? aiRes.response : "") ||
+                                (typeof aiRes === "string" ? aiRes : "");
+                if (rawText) {
+                  const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
+                  const s = cleaned.indexOf("{");
+                  const e = cleaned.lastIndexOf("}");
+                  if (s !== -1 && e > s) {
+                    try {
+                      parsed = JSON.parse(cleaned.slice(s, e + 1));
+                    } catch (pe) {
+                      console.warn("AI JSON parse fail:", pe.message);
+                    }
+                  }
                 }
-                if (parsed.grammar_explanation && !grammarResult.isPerfect) {
-                  finalExplanation = parsed.grammar_explanation;
-                }
+              }
+            }
+
+            if (parsed) {
+              if (parsed.reply) finalReply = parsed.reply;
+              if (parsed.follow_up_hint) finalHint = parsed.follow_up_hint;
+              if (typeof parsed.is_grammar_perfect === "boolean") {
+                finalIsPerfect = grammarResult.isPerfect && parsed.is_grammar_perfect;
+              }
+              if (parsed.direct_fix && parsed.direct_fix !== userMessage) {
+                finalDirectFix = parsed.direct_fix;
+              }
+              const casualOpt = parsed.casual_native || parsed.casual || finalVariants[1]?.sentence || finalDirectFix;
+              const fluentOpt = parsed.fluent_polite || parsed.polite || parsed.fluent || finalVariants[2]?.sentence || finalDirectFix;
+              finalVariants = [
+                { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: finalDirectFix },
+                { label: "추천 1 · Casual Native", sentence: casualOpt },
+                { label: "추천 2 · Fluent & Expressive", sentence: fluentOpt }
+              ];
+              if (parsed.grammar_explanation && !finalIsPerfect) {
+                finalExplanation = parsed.grammar_explanation;
               }
             }
           } catch (aiErr) {
