@@ -635,11 +635,34 @@ Respond ONLY with a JSON object:
   "fluent_polite": "Polite native phrasing.",
   "grammar_explanation": "1 concise sentence explaining errors."
 }`;
-            const aiRes = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-              messages: [{ role: "user", content: aiPrompt }],
-              max_tokens: 384,
-              temperature: 0.3
-            });
+            const candidateModels = [
+              "@cf/meta/llama-3.2-3b-instruct",
+              "@cf/meta/llama-3-8b-instruct",
+              "@cf/meta/llama-3.2-1b-instruct",
+              "@cf/mistral/mistral-7b-instruct-v0.2"
+            ];
+            let aiRes = null;
+            let lastErr = null;
+            let usedModel = null;
+            for (const m of candidateModels) {
+              try {
+                aiRes = await env.AI.run(m, {
+                  messages: [{ role: "user", content: aiPrompt }],
+                  max_tokens: 384,
+                  temperature: 0.3
+                });
+                if (aiRes && (aiRes.response || typeof aiRes === "string")) {
+                  usedModel = m;
+                  break;
+                }
+              } catch (err) {
+                lastErr = err.message || String(err);
+              }
+            }
+            aiDebugInfo.usedModel = usedModel;
+            if (!aiRes && lastErr) {
+              throw new Error(lastErr);
+            }
             aiDebugInfo.raw = aiRes;
             const textContent = (aiRes && (aiRes.response || (typeof aiRes === "string" ? aiRes : JSON.stringify(aiRes)))) || "";
             if (textContent) {
