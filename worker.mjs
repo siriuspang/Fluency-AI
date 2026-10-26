@@ -148,7 +148,29 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     { regex: /\bsuprise(d|s)?\b/gi, replacement: "surprise$1", word: '"suprise" → "surprise"' },
     { regex: /\bintersted\b/gi, replacement: "interested", word: '"intersted" → "interested"' },
     { regex: /\bdiffrent\b/gi, replacement: "different", word: '"diffrent" → "different"' },
-    { regex: /\bimportent\b/gi, replacement: "important", word: '"importent" → "important"' }
+    { regex: /\bimportent\b/gi, replacement: "important", word: '"importent" → "important"' },
+    { regex: /\bhving\b/gi, replacement: "having", word: '"hving" → "having"' },
+    { regex: /\bnetural\b/gi, replacement: "natural", word: '"netural" → "natural"' },
+    { regex: /\bconvarsation(s?)\b/gi, replacement: "conversation$1", word: '"convarsations" → "conversations"' },
+    { regex: /\bconvesation(s?)\b/gi, replacement: "conversation$1", word: '"convesation" → "conversation"' },
+    { regex: /\bconvensation(s?)\b/gi, replacement: "conversation$1", word: '"convensation" → "conversation"' },
+    { regex: /\bdificult\b/gi, replacement: "difficult", word: '"dificult" → "difficult"' },
+    { regex: /\brobitic\b/gi, replacement: "robotic", word: '"robitic" → "robotic"' },
+    { regex: /\bunnatual\b/gi, replacement: "unnatural", word: '"unnatual" → "unnatural"' },
+    { regex: /\benglsih\b/gi, replacement: "English", word: '"englsih" → "English"' },
+    { regex: /\benglsh\b/gi, replacement: "English", word: '"englsh" → "English"' },
+    { regex: /\bengilsh\b/gi, replacement: "English", word: '"engilsh" → "English"' },
+    { regex: /\bcomunication\b/gi, replacement: "communication", word: '"comunication" → "communication"' },
+    { regex: /\bfluncy\b/gi, replacement: "fluency", word: '"fluncy" → "fluency"' },
+    { regex: /\buntill\b/gi, replacement: "until", word: '"untill" → "until"' },
+    { regex: /\bbeleive\b/gi, replacement: "believe", word: '"beleive" → "believe"' },
+    { regex: /\btomorow\b/gi, replacement: "tomorrow", word: '"tomorow" → "tomorrow"' },
+    { regex: /\byesturday\b/gi, replacement: "yesterday", word: '"yesturday" → "yesterday"' },
+    { regex: /\bvacaton\b/gi, replacement: "vacation", word: '"vacaton" → "vacation"' },
+    { regex: /\bwondeful\b/gi, replacement: "wonderful", word: '"wondeful" → "wonderful"' },
+    { regex: /\bfreind(s?)\b/gi, replacement: "friend$1", word: '"freind" → "friend"' },
+    { regex: /\bweild\b/gi, replacement: "weird", word: '"weild" → "weird"' },
+    { regex: /\bwerid\b/gi, replacement: "weird", word: '"werid" → "weird"' }
   ];
 
   for (const sp of spellingMap) {
@@ -448,6 +470,15 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
     ];
   }
 
+  // 6. Difficult AI conversations / chat
+  if (/difficult|hard|tough|challenging/i.test(lower) && /conversation|talk|chat|ai|speaking/i.test(lower)) {
+    return [
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
+      { label: "추천 1 · Casual Native", sentence: "It's pretty tough having natural conversations with AI." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "Having seamless, natural conversations with AI presents quite a challenge." }
+    ];
+  }
+
   // General intelligent variants (No synthetic prefixes)
   const core = primaryCorrected.replace(/[.!?]+$/, "").trim();
   const isQuestion = /\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
@@ -460,10 +491,24 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
     ];
   }
 
+  let casualVar = primaryCorrected;
+  if (/^it'?s\s+difficult\s+to\b/i.test(primaryCorrected)) {
+    casualVar = primaryCorrected.replace(/^it'?s\s+difficult\s+to\b/i, "It's really hard to");
+  } else if (/^it'?s\s+difficult\b/i.test(primaryCorrected)) {
+    casualVar = primaryCorrected.replace(/^it'?s\s+difficult\b/i, "It's pretty tough");
+  } else if (!/^(well|honestly|actually|to be honest)/i.test(primaryCorrected)) {
+    casualVar = `Honestly, ${primaryCorrected.charAt(0).toLowerCase() + primaryCorrected.slice(1)}`;
+  }
+
+  let fluentVar = primaryCorrected;
+  if (!/^(in my experience|from my perspective|i've noticed that)/i.test(primaryCorrected)) {
+    fluentVar = `In my experience, ${primaryCorrected.charAt(0).toLowerCase() + primaryCorrected.slice(1)}`;
+  }
+
   return [
     { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-    { label: "추천 1 · Casual Native", sentence: primaryCorrected },
-    { label: "추천 2 · Fluent & Expressive", sentence: primaryCorrected }
+    { label: "추천 1 · Casual Native", sentence: casualVar },
+    { label: "추천 2 · Fluent & Expressive", sentence: fluentVar }
   ];
 }
 
@@ -582,6 +627,25 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
+  // 5B. AI & Conversational practice (e.g. "difficult having natural conversations with AI")
+  if (/ai|bot|robot/i.test(lower) && /conversation|conversations|talk|talking|chat|chatting|natural|difficult|hard|awkward/i.test(lower)) {
+    reply = `I completely understand where you're coming from! Having a truly natural back-and-forth conversation with AI can definitely feel challenging at times. What feels the most unnatural or awkward when you chat?`;
+    followUpHint = "Sometimes the responses feel a little too formal or repetitive.";
+    pronunciationTips = [
+      { word: "Natural (ˈnætʃ.ɚ.əl)", tip: "Short 'a' in the first syllable: 'NA-chur-ul'." },
+      { word: "Conversation (ˌkɑːn.vɚˈseɪ.ʃən)", tip: "Stress the third syllable: 'con-ver-SAY-shun'." }
+    ];
+    keyVocabulary = [
+      { word: "back-and-forth", meaning: "주고받는 대화" },
+      { word: "stiff", meaning: "어색하고 딱딱한" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "It's pretty tough having natural conversations with AI." },
+      { tone: "Fluent & Expressive", phrase: "Having seamless, natural conversations with AI presents quite a challenge." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
+  }
+
   // 6. Work, Coding, Tech & AI
   if (/work|job|coding|code|developer|project|software|agent|tech|ai|study|studying|meeting/i.test(lower)) {
     reply = `Sounds like you've been working on something fascinating! What's the most exciting challenge you're tackling right now?`;
@@ -678,17 +742,17 @@ export default {
         let finalIsPerfect = grammarResult.isPerfect;
         let finalVariants = grammarResult.correctedVariants;
 
-        let aiDebugInfo = { hasEnvAI: Boolean(env && env.AI), called: false, usedModel: null, error: null };
+        let aiDebugInfo = { hasEnvAI: Boolean(env && env.AI), called: false, usedVoiceModel: null, usedCoachModel: null, error: null };
         if (env && env.AI) {
           aiDebugInfo.called = true;
           try {
             // ==================== PIPECAT & LIVEKIT CONVERSATIONAL VOICE PIPELINE ====================
-            // Dedicated Voice Dialogue Agent (Pure spoken conversation without grammar pollution)
+            // Track 1: Dedicated Voice Dialogue Agent (Pure spoken human conversation without grammar pollution)
             const voiceSystemPrompt = `You are ${partnerName}, an authentic, warm native English speaker having a casual 1-on-1 voice conversation with a friend. Scenario: "${scenarioTitle}".
 
 VOICE CONVERSATION RULES:
 1. Speak naturally like a real human friend over coffee (use casual, natural everyday spoken English).
-2. React genuinely to what the user said with emotional warmth (e.g. "Oh, nice!", "That sounds amazing!", "I know what you mean!").
+2. React genuinely to what the user said with emotional warmth (e.g. "Oh, I know what you mean!", "That sounds amazing!", "I totally get that!").
 3. NEVER repeat the user's words back to them, and NEVER say things like "I think you mean..." or "I mean writing".
 4. NEVER mention grammar, typos, spelling mistakes, English practice, lessons, or tests. You are NOT an AI assistant or teacher; you are a friend.
 5. Even if the user made typos or small slips of the tongue, effortlessly understand their intended meaning without ever mentioning the typo.
@@ -704,6 +768,26 @@ VOICE CONVERSATION RULES:
               { role: "user", content: userMessage }
             ];
 
+            // Track 2: Dedicated Bilingual Shadow Coach Agent (Spelling, Grammar, CEFR, Native Variations)
+            const coachSystemPrompt = `You are an expert bilingual English speaking & grammar coach.
+Analyze the user's English utterance: "${userMessage}".
+Check for ANY spelling typos, missing letters, grammatical errors, subject-verb disagreement, prepositions, or unnatural phrasing.
+Correct all mistakes into clean, natural standard English while preserving the user's intended meaning.
+
+Respond ONLY with a valid JSON object matching this schema (no markdown fences, no text before or after):
+{
+  "is_grammar_perfect": boolean,
+  "direct_fix": "User's sentence with ALL spelling typos, missing letters, and grammatical errors corrected into clean standard English",
+  "casual_native": "How a native speaker would say this exact thought casually in everyday speech",
+  "fluent_polite": "How a native speaker would say this in polished, expressive English",
+  "explanation": "Friendly 1-2 sentence explanation in Korean specifically describing the typos and grammar corrections made (e.g. '철자 교정: hving -> having, netural -> natural...')"
+}`;
+
+            const coachMessages = [
+              { role: "system", content: coachSystemPrompt },
+              { role: "user", content: `Analyze and correct: "${userMessage}"` }
+            ];
+
             const candidateModels = [
               "@cf/meta/llama-3.2-3b-instruct",
               "@cf/meta/llama-3-8b-instruct",
@@ -711,27 +795,34 @@ VOICE CONVERSATION RULES:
               "@cf/mistral/mistral-7b-instruct-v0.2"
             ];
 
-            let aiVoiceRes = null;
-            let lastErr = null;
-            let usedModel = null;
-            for (const m of candidateModels) {
-              try {
-                aiVoiceRes = await env.AI.run(m, {
-                  messages: voiceMessages,
-                  max_tokens: 120,
-                  temperature: 0.6
-                });
-                if (aiVoiceRes && (aiVoiceRes.response || aiVoiceRes.choices || typeof aiVoiceRes === "string")) {
-                  usedModel = m;
-                  break;
+            async function runAIWithCandidates(messages, maxTokens, temperature) {
+              for (const m of candidateModels) {
+                try {
+                  const res = await env.AI.run(m, {
+                    messages,
+                    max_tokens: maxTokens,
+                    temperature
+                  });
+                  if (res && (res.response || res.choices || typeof res === "string")) {
+                    return { res, model: m };
+                  }
+                } catch (e) {
+                  // try next candidate
                 }
-              } catch (err) {
-                lastErr = err.message || String(err);
               }
+              return null;
             }
-            aiDebugInfo.usedModel = usedModel;
 
-            if (aiVoiceRes) {
+            // Execute Track 1 (Voice Dialogue) and Track 2 (Shadow Coach) concurrently!
+            const [voiceRun, coachRun] = await Promise.allSettled([
+              runAIWithCandidates(voiceMessages, 120, 0.6),
+              runAIWithCandidates(coachMessages, 250, 0.2)
+            ]);
+
+            // Process Track 1 (Spoken Voice Reply)
+            if (voiceRun.status === "fulfilled" && voiceRun.value) {
+              aiDebugInfo.usedVoiceModel = voiceRun.value.model;
+              const aiVoiceRes = voiceRun.value.res;
               let rawVoiceText = (aiVoiceRes.choices && aiVoiceRes.choices[0] && aiVoiceRes.choices[0].message && aiVoiceRes.choices[0].message.content) ||
                                 (typeof aiVoiceRes.response === "string" ? aiVoiceRes.response : "") ||
                                 (typeof aiVoiceRes === "string" ? aiVoiceRes : "");
@@ -739,6 +830,55 @@ VOICE CONVERSATION RULES:
                 rawVoiceText = rawVoiceText.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
                 if (!/^(as an ai|i am an ai|i cannot|i think you mean)\b/i.test(rawVoiceText) && rawVoiceText.length > 5) {
                   finalReply = rawVoiceText;
+                }
+              }
+            }
+
+            // Process Track 2 (Shadow Coach Grammar Analysis)
+            if (coachRun.status === "fulfilled" && coachRun.value) {
+              aiDebugInfo.usedCoachModel = coachRun.value.model;
+              const aiCoachRes = coachRun.value.res;
+              let rawCoachText = (aiCoachRes.choices && aiCoachRes.choices[0] && aiCoachRes.choices[0].message && aiCoachRes.choices[0].message.content) ||
+                                (typeof aiCoachRes.response === "string" ? aiCoachRes.response : "") ||
+                                (typeof aiCoachRes === "string" ? aiCoachRes : "");
+              if (rawCoachText) {
+                rawCoachText = rawCoachText.replace(/```(?:json)?/gi, "").replace(/```/gi, "").trim();
+                const jsonMatch = rawCoachText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  try {
+                    const parsedCoach = JSON.parse(jsonMatch[0]);
+                    if (parsedCoach.direct_fix && typeof parsedCoach.direct_fix === "string") {
+                      const cleanFix = parsedCoach.direct_fix.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
+                      if (cleanFix.length > 0) {
+                        finalDirectFix = cleanFix;
+
+                        const normOrig = userMessage.toLowerCase().replace(/[^a-z0-9]/g, "");
+                        const normFix = cleanFix.toLowerCase().replace(/[^a-z0-9]/g, "");
+                        if (normOrig !== normFix) {
+                          finalIsPerfect = false;
+                        } else {
+                          finalIsPerfect = Boolean(parsedCoach.is_grammar_perfect);
+                        }
+
+                        if (parsedCoach.explanation && typeof parsedCoach.explanation === "string" && parsedCoach.explanation.length > 3) {
+                          finalExplanation = parsedCoach.explanation.trim();
+                        } else if (!finalIsPerfect) {
+                          finalExplanation = "문장의 철자 오류 및 문법 표현을 자연스러운 표준 영어로 교정했습니다.";
+                        }
+
+                        const casual = (parsedCoach.casual_native && typeof parsedCoach.casual_native === "string" && parsedCoach.casual_native.trim()) || finalDirectFix;
+                        const fluent = (parsedCoach.fluent_polite && typeof parsedCoach.fluent_polite === "string" && parsedCoach.fluent_polite.trim()) || finalDirectFix;
+
+                        finalVariants = [
+                          { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: finalDirectFix },
+                          { label: "추천 1 · Casual Native", sentence: casual },
+                          { label: "추천 2 · Fluent & Expressive", sentence: fluent }
+                        ];
+                      }
+                    }
+                  } catch (parseErr) {
+                    console.warn("Workers AI coach JSON parse error:", parseErr);
+                  }
                 }
               }
             }

@@ -1791,7 +1791,29 @@ function analyzeGrammarAndPhrasing(userMessage, modelMeta) {
     { regex: /\bsuprise(d|s)?\b/gi, replacement: "surprise$1", word: '"suprise" → "surprise"' },
     { regex: /\bintersted\b/gi, replacement: "interested", word: '"intersted" → "interested"' },
     { regex: /\bdiffrent\b/gi, replacement: "different", word: '"diffrent" → "different"' },
-    { regex: /\bimportent\b/gi, replacement: "important", word: '"importent" → "important"' }
+    { regex: /\bimportent\b/gi, replacement: "important", word: '"importent" → "important"' },
+    { regex: /\bhving\b/gi, replacement: "having", word: '"hving" → "having"' },
+    { regex: /\bnetural\b/gi, replacement: "natural", word: '"netural" → "natural"' },
+    { regex: /\bconvarsation(s?)\b/gi, replacement: "conversation$1", word: '"convarsations" → "conversations"' },
+    { regex: /\bconvesation(s?)\b/gi, replacement: "conversation$1", word: '"convesation" → "conversation"' },
+    { regex: /\bconvensation(s?)\b/gi, replacement: "conversation$1", word: '"convensation" → "conversation"' },
+    { regex: /\bdificult\b/gi, replacement: "difficult", word: '"dificult" → "difficult"' },
+    { regex: /\brobitic\b/gi, replacement: "robotic", word: '"robitic" → "robotic"' },
+    { regex: /\bunnatual\b/gi, replacement: "unnatural", word: '"unnatual" → "unnatural"' },
+    { regex: /\benglsih\b/gi, replacement: "English", word: '"englsih" → "English"' },
+    { regex: /\benglsh\b/gi, replacement: "English", word: '"englsh" → "English"' },
+    { regex: /\bengilsh\b/gi, replacement: "English", word: '"engilsh" → "English"' },
+    { regex: /\bcomunication\b/gi, replacement: "communication", word: '"comunication" → "communication"' },
+    { regex: /\bfluncy\b/gi, replacement: "fluency", word: '"fluncy" → "fluency"' },
+    { regex: /\buntill\b/gi, replacement: "until", word: '"untill" → "until"' },
+    { regex: /\bbeleive\b/gi, replacement: "believe", word: '"beleive" → "believe"' },
+    { regex: /\btomorow\b/gi, replacement: "tomorrow", word: '"tomorow" → "tomorrow"' },
+    { regex: /\byesturday\b/gi, replacement: "yesterday", word: '"yesturday" → "yesterday"' },
+    { regex: /\bvacaton\b/gi, replacement: "vacation", word: '"vacaton" → "vacation"' },
+    { regex: /\bwondeful\b/gi, replacement: "wonderful", word: '"wondeful" → "wonderful"' },
+    { regex: /\bfreind(s?)\b/gi, replacement: "friend$1", word: '"freind" → "friend"' },
+    { regex: /\bweild\b/gi, replacement: "weird", word: '"weild" → "weird"' },
+    { regex: /\bwerid\b/gi, replacement: "weird", word: '"werid" → "weird"' }
   ];
 
   for (const sp of spellingMap) {
@@ -2091,6 +2113,15 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
     ];
   }
 
+  // 6. Difficult AI conversations / chat
+  if (/difficult|hard|tough|challenging/i.test(lower) && /conversation|talk|chat|ai|speaking/i.test(lower)) {
+    return [
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
+      { label: "추천 1 · Casual Native", sentence: "It's pretty tough having natural conversations with AI." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "Having seamless, natural conversations with AI presents quite a challenge." }
+    ];
+  }
+
   // General intelligent variants (No synthetic prefixes)
   const core = primaryCorrected.replace(/[.!?]+$/, "").trim();
   const isQuestion = /\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
@@ -2103,10 +2134,24 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
     ];
   }
 
+  let casualVar = primaryCorrected;
+  if (/^it'?s\s+difficult\s+to\b/i.test(primaryCorrected)) {
+    casualVar = primaryCorrected.replace(/^it'?s\s+difficult\s+to\b/i, "It's really hard to");
+  } else if (/^it'?s\s+difficult\b/i.test(primaryCorrected)) {
+    casualVar = primaryCorrected.replace(/^it'?s\s+difficult\b/i, "It's pretty tough");
+  } else if (!/^(well|honestly|actually|to be honest)/i.test(primaryCorrected)) {
+    casualVar = `Honestly, ${primaryCorrected.charAt(0).toLowerCase() + primaryCorrected.slice(1)}`;
+  }
+
+  let fluentVar = primaryCorrected;
+  if (!/^(in my experience|from my perspective|i've noticed that)/i.test(primaryCorrected)) {
+    fluentVar = `In my experience, ${primaryCorrected.charAt(0).toLowerCase() + primaryCorrected.slice(1)}`;
+  }
+
   return [
     { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-    { label: "추천 1 · Casual Native", sentence: primaryCorrected },
-    { label: "추천 2 · Fluent & Expressive", sentence: primaryCorrected }
+    { label: "추천 1 · Casual Native", sentence: casualVar },
+    { label: "추천 2 · Fluent & Expressive", sentence: fluentVar }
   ];
 }
 
