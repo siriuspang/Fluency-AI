@@ -715,7 +715,25 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: "I don't understand that." },
       { label: "추천 1 · Casual Native", sentence: "I didn't quite catch that—could you say it again?" },
-      { label: "추천 2 · Fluent & Expressive", sentence: "I'm not entirely following—could you explain that a bit more simply?" }
+      { label: "추천 2 · Fluent & Expressive", sentence: "Could you rephrase that a bit more simply for me?" }
+    ];
+  }
+
+  // 1B. Writing / "rigting" / "writing"
+  if (/rigting|writing|draft|article|email|essay|blog/i.test(lower)) {
+    return [
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
+      { label: "추천 1 · Casual Native", sentence: "Hey, I'm just doing a bit of writing right now." },
+      { label: "추천 2 · Fluent & Expressive", sentence: "Hello! I'm currently working on some writing." }
+    ];
+  }
+
+  // 1C. What do you think / asking opinion
+  if (/what\s+do\s+(you|dyo|u)\s+think|your\s+take|your\s+opinion/i.test(lower)) {
+    return [
+      { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
+      { label: "추천 1 · Casual Native", sentence: "What's your take on this?" },
+      { label: "추천 2 · Fluent & Expressive", sentence: "I'd love to hear your perspective on this." }
     ];
   }
 
@@ -755,22 +773,22 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
     ];
   }
 
-  // General intelligent variants
+  // General intelligent variants (No synthetic prefixes)
   const core = primaryCorrected.replace(/[.!?]+$/, "").trim();
   const isQuestion = /\?$/.test(primaryCorrected) || /^(can|could|would|do|does|did|is|are|what|why|how|where|when|who)\b/i.test(core);
 
   if (isQuestion) {
     return [
       { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-      { label: "추천 1 · Casual Native", sentence: `Could you tell me, ${core.charAt(0).toLowerCase() + core.slice(1)}?` },
-      { label: "추천 2 · Fluent & Expressive", sentence: `I was wondering, ${core.charAt(0).toLowerCase() + core.slice(1)}?` }
+      { label: "추천 1 · Casual Native", sentence: primaryCorrected },
+      { label: "추천 2 · Fluent & Expressive", sentence: `I was wondering—${core.charAt(0).toLowerCase() + core.slice(1)}?` }
     ];
   }
 
   return [
     { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: primaryCorrected },
-    { label: "추천 1 · Casual Native", sentence: `Actually, ${core.charAt(0).toLowerCase() + core.slice(1)}.` },
-    { label: "추천 2 · Fluent & Expressive", sentence: `To put it another way, ${core.charAt(0).toLowerCase() + core.slice(1)}.` }
+    { label: "추천 1 · Casual Native", sentence: primaryCorrected },
+    { label: "추천 2 · Fluent & Expressive", sentence: primaryCorrected }
   ];
 }
 
@@ -790,35 +808,87 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
 
   // 1. Clarification / "I don't understand" / "I didn't catch that"
   if (/undesodn|understand|don'?t\s+get|what\s+do\s+you\s+mean|didn'?t\s+catch|pardon|repeat|say\s+again/i.test(lower)) {
-    reply = `No worries at all! Let me slow down and rephrase. Which part would you like me to explain more simply?`;
-    followUpHint = "Could you explain the last question one more time with simpler words?";
+    reply = `Oh, no worries at all! Let me slow down and put it more simply. What is one of your favorite things to do when you have free time?`;
+    followUpHint = "I usually love watching movies and taking quiet walks.";
     pronunciationTips = [
-      { word: "Understand (ˌʌn.dɚˈstænd)", tip: "Stress the last syllable clearly: 'un-der-STAND'." },
+      { word: "Understand (ˌʌn.dɚˈstænd)", tip: "Stress the third syllable clearly: 'un-der-STAND'." },
       { word: "Explain (ɪkˈspleɪn)", tip: "Link the 'k' and 'sp' smoothly without adding extra vowels." }
     ];
     keyVocabulary = [
-      { word: "break down", meaning: "To explain something complex in simpler parts." },
-      { word: "catch that", meaning: "To hear or understand what was said." }
+      { word: "break down", meaning: "이해하기 쉽게 풀어서 설명하다" },
+      { word: "catch that", meaning: "말한 내용을 알아듣다, 이해하다" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "I didn't quite catch that—could you say it again?" },
+      { tone: "Fluent & Expressive", phrase: "Could you rephrase that a bit more simply for me?" }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 2. Travel & Vacation (e.g. Chungju, trips, flights)
+  // 2. Writing / Drafting / Journaling ("Hi i m rigting")
+  if (/rigting|writing|drafting|typing|journal|article|notes/i.test(lower)) {
+    reply = `Hey there! What kind of writing are you working on today—an article, an email, or some English notes?`;
+    followUpHint = "I'm just writing down a few thoughts to practice my English.";
+    pronunciationTips = [
+      { word: "Writing (ˈraɪ.t̬ɪŋ)", tip: "Notice the 'w' is silent; start directly with the 'r' sound: 'RYE-ting'." },
+      { word: "Draft (dræft)", tip: "Keep the short 'a' crisp and pronounce the final 'ft' clearly." }
+    ];
+    keyVocabulary = [
+      { word: "jot down", meaning: "간단히 적어두다, 메모하다" },
+      { word: "draft", meaning: "초안을 작성하다" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "Hey, I'm just doing a bit of writing right now." },
+      { tone: "Fluent & Expressive", phrase: "Hello! I'm currently working on some writing." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
+  }
+
+  // 3. User asks opinion ("what do dyo think ?", "what do you think ?")
+  if (/what\s+do\s+(you|dyo|u)\s+think|your\s+thoughts|your\s+take/i.test(lower)) {
+    const recentTopic = history.slice(-4).find(m => m.role === 'user' && !/think/i.test(m.text));
+    if (recentTopic && /chung-?ju|trip|travel/i.test(recentTopic.text)) {
+      reply = `I think a family trip to Chungju sounds wonderful! Taking time to relax together makes great memories. What are you most excited to do there?`;
+    } else if (recentTopic && /cook|food|pasta/i.test(recentTopic.text)) {
+      reply = `I think making delicious food at home is always satisfying! What's your secret ingredient for that?`;
+    } else {
+      reply = `I think open, spontaneous chats like this are the most rewarding way to build real speaking confidence! What's your own take on how practicing English feels for you today?`;
+    }
+    followUpHint = "I think it's definitely helping me feel more comfortable speaking.";
+    pronunciationTips = [
+      { word: "Think (θɪŋk)", tip: "Keep your tongue lightly between your teeth for the unvoiced 'th' sound." }
+    ];
+    keyVocabulary = [
+      { word: "take on", meaning: "~에 대한 개인적인 의견이나 견해" },
+      { word: "perspective", meaning: "관점, 시각" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "What's your take on this?" },
+      { tone: "Fluent & Expressive", phrase: "I'd love to hear your perspective on this." }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
+  }
+
+  // 4. Travel & Vacation (e.g. Chungju, trips, flights)
   if (/trip|travel|vacation|chung-?ju|flight|hotel|tour|sightseeing|beach|mountains/i.test(lower)) {
-    reply = `Traveling is always such a refreshing experience! What are you most excited to see or do on your trip?`;
-    followUpHint = "I'm really looking forward to sightseeing, trying good local food, and relaxing with my family.";
+    reply = `That sounds like a wonderful family getaway! Chungju is so peaceful with its scenic lake and mountains. What are you most excited to do together there?`;
+    followUpHint = "We're planning to take a scenic walk around the lake and relax.";
     pronunciationTips = [
       { word: "Scenic (ˈsiː.nɪk)", tip: "Start with a soft 's' and stress the first syllable: 'SEE-nik'." },
       { word: "Vacation (veɪˈkeɪ.ʃən)", tip: "Keep the middle syllable stressed: 'vay-KAY-shun'." }
     ];
     keyVocabulary = [
-      { word: "getaway", meaning: "A short vacation or holiday." },
-      { word: "sightseeing", meaning: "Visiting interesting places as a tourist." }
+      { word: "getaway", meaning: "짧은 휴가, 여행" },
+      { word: "sightseeing", meaning: "관광, 명소 둘러보기" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "I'm heading on a family trip down to Chungju." },
+      { tone: "Fluent & Expressive", phrase: "My family and I are taking a weekend getaway to Chungju." }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 3. Food, Cooking & Dining (e.g. pizza, pasta, dinner, supermarket, grocery)
+  // 5. Food, Cooking & Dining (e.g. pizza, pasta, dinner, supermarket, grocery)
   if (/food|cook|cooked|cooking|dinner|lunch|breakfast|eat|ate|pizza|pasta|supermarket|grocery|restaurant|delicious|meal/i.test(lower)) {
     reply = `That sounds delicious! Did you make it yourself with a special recipe, or did you try it at a favorite spot?`;
     followUpHint = "I made it at home with fresh ingredients, and it turned out really flavorful.";
@@ -827,13 +897,17 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
       { word: "Recipe (ˈres.ə.pi)", tip: "Three syllables: 'REH-suh-pee'." }
     ];
     keyVocabulary = [
-      { word: "from scratch", meaning: "Made completely from raw ingredients without shortcuts." },
-      { word: "flavorful", meaning: "Full of rich, enjoyable taste." }
+      { word: "from scratch", meaning: "직접 처음부터 손수 만든" },
+      { word: "flavorful", meaning: "풍미가 넘치는, 맛있는" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "I made some really tasty pasta today." },
+      { tone: "Fluent & Expressive", phrase: "I prepared a delicious homemade dish today." }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 4. Work, Coding, Tech & AI
+  // 6. Work, Coding, Tech & AI
   if (/work|job|coding|code|developer|project|software|agent|tech|ai|study|studying|meeting/i.test(lower)) {
     reply = `Sounds like you've been working on something fascinating! What's the most exciting challenge you're tackling right now?`;
     followUpHint = "I've been building a project using AI tools, and it's making my workflow much faster.";
@@ -842,40 +916,48 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
       { word: "Challenge (ˈtʃæl.ɪndʒ)", tip: "Clear 'ch' sound at the beginning: 'CHAL-inj'." }
     ];
     keyVocabulary = [
-      { word: "workflow", meaning: "The sequence of steps in a work process." },
-      { word: "hands-on", meaning: "Practical, active involvement in doing something." }
+      { word: "workflow", meaning: "업무 절차, 작업 흐름" },
+      { word: "hands-on", meaning: "직접 해보는, 실무적인" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "I've been pretty wrapped up in this project lately." },
+      { tone: "Fluent & Expressive", phrase: "I've been deeply focused on this technical project recently." }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 5. Feelings, Boredom, Relaxation & Weekend
+  // 7. Feelings, Boredom, Relaxation & Weekend
   if (/bored|boring|tired|exhausted|relax|relaxing|weekend|free time|rest|sleep/i.test(lower)) {
-    reply = `I completely understand how you feel. When you have downtime like this, what's your favorite way to unwind and recharge?`;
+    reply = `I completely understand how you feel! When you have downtime like this, what's your favorite way to unwind and recharge?`;
     followUpHint = "I usually like listening to music, going for a walk, or catching up on sleep.";
     pronunciationTips = [
       { word: "Unwind (ʌnˈwaɪnd)", tip: "Long 'eye' sound: 'un-WYND'." },
       { word: "Recharge (riːˈtʃɑːrdʒ)", tip: "Stress the second syllable: 'ree-CHARJ'." }
     ];
     keyVocabulary = [
-      { word: "unwind", meaning: "To relax after a period of work or stress." },
-      { word: "downtime", meaning: "Time spent relaxing and resting." }
+      { word: "unwind", meaning: "긴장을 풀고 쉬다" },
+      { word: "downtime", meaning: "휴식 시간" }
+    ];
+    betterExpressions = [
+      { tone: "Casual Native", phrase: "I'm just taking it easy and unwinding today." },
+      { tone: "Fluent & Expressive", phrase: "I'm taking some time out to recharge my batteries." }
     ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 6. User asks a question (Why, How, What, Can you, Do you)
-  if (/\?$/.test(clean) || /^(what|how|why|when|where|who|can you|could you|do you|are you)/i.test(clean)) {
-    reply = `That's a thoughtful question! I really enjoy helping people build confidence in English while sharing fun cultural insights. What inspired you to ask about that?`;
+  // 8. General Questions (Why, How, What, Can you, Do you)
+  if (/\?$/.test(clean) || /^(what|how|why|when|where|who|can you|could you|do you|are you) /i.test(clean)) {
+    reply = `That's a great question to think about! In my experience, discussing ideas openly makes learning English so much more fun. How about you—what's your take?`;
     followUpHint = "I'm always curious to learn new perspectives and practice asking questions naturally.";
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 7. General Dynamic Contextual Fallback (Rotating & Topic Aware)
+  // 9. General Dynamic Contextual Fallback (Natural, Empathetic, Non-Robotic)
   const dynamicReplies = [
-    `That gives a great glimpse into your day! What was the most interesting or memorable part of that for you?`,
-    `I love hearing about that! How did everything turn out in the end?`,
-    `That sounds like a meaningful experience. What are you planning to do next with that?`,
-    `That's really cool! Have you always enjoyed doing that, or is it something relatively new for you?`
+    `That's really interesting! What's something coming up this week that you're looking forward to?`,
+    `I appreciate you sharing that with me! How do you usually like spending your free hours?`,
+    `That sounds like a great moment! What was the highlight of your day so far?`,
+    `It's so fun chatting with you about this! What other topics do you enjoy talking about most in English?`
   ];
   const charHash = clean.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   reply = dynamicReplies[charHash % dynamicReplies.length];
@@ -885,6 +967,13 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
 }
 
 
+const AGY_EXE_PATH =
+  process.env.ANTIGRAVITY_AGENTAPI_EXE ||
+  path.join(process.env.LOCALAPPDATA || "C:\\Users\\USER\\AppData\\Local", "agy", "bin", "agy.exe");
+
+let agyWorkerState = null;
+let agyStandbyPromise = null;
+const pendingCoachMap = new Map();
 
 function createAgyWorkerState() {
   if (!fs.existsSync(AGY_EXE_PATH)) {
@@ -1486,7 +1575,7 @@ async function buildCoachingResponse(
   const isPureGreeting =
     wordLen <= 3 && /^(hi|hello|hey|good morning|good afternoon|good evening|hi there|hello there)[.!?]*$/i.test(lower);
 
-  if (!isShortSelfIntro && !isPureGreeting && grammarResult.isPerfect) {
+  if (!isShortSelfIntro && !isPureGreeting) {
     const llmPromise = callRealCoachLLM(
       userMessage,
       modelId,
@@ -1551,7 +1640,10 @@ async function buildCoachingResponse(
     corrected_sentence: grammarResult.corrected,
     corrected_variants: grammarResult.correctedVariants,
     grammar_explanation: grammarResult.explanation,
-    better_expressions: convResult.betterExpressions,
+    better_expressions: [
+      { tone: "Casual Native", phrase: grammarResult.correctedVariants?.[1]?.sentence || grammarResult.corrected },
+      { tone: "Fluent & Expressive", phrase: grammarResult.correctedVariants?.[2]?.sentence || grammarResult.corrected }
+    ],
     pronunciation_tips: convResult.pronunciationTips,
     key_vocabulary: convResult.keyVocabulary,
     recommended_speech_rate: convResult.recommendedSpeechRate || null,
