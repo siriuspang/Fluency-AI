@@ -910,8 +910,8 @@ function renderCoachingFeedback(coaching) {
       dom.lastUserUtterance.textContent = `"대화를 입력하거나 음성으로 말하면 어법 분석과 교정이 여기에 표시됩니다."`;
     }
     if (dom.userSentenceStatus) {
-      dom.userSentenceStatus.textContent = "오류 분석 대기";
-      dom.userSentenceStatus.className = "user-sentence-status";
+      dom.userSentenceStatus.textContent = "";
+      dom.userSentenceStatus.className = "user-sentence-status hidden";
     }
   } else {
     const diff = computeWordDiff(rawUserUtterance, primarySentence);
@@ -927,8 +927,8 @@ function renderCoachingFeedback(coaching) {
         dom.userSentenceStatus.textContent = "✅ 어법 완벽 (오류 없음)";
         dom.userSentenceStatus.className = "user-sentence-status perfect";
       } else {
-        dom.userSentenceStatus.textContent = "⚠️ 틀린 부분 표시됨 (빨간색)";
-        dom.userSentenceStatus.className = "user-sentence-status has-error";
+        dom.userSentenceStatus.textContent = "";
+        dom.userSentenceStatus.className = "user-sentence-status hidden";
       }
     }
   }
