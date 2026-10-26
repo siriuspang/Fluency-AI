@@ -759,19 +759,32 @@ button, input, select, textarea {
   border-color: rgba(99, 102, 241, 0.45);
 }
 
-/* 문장 호버 / 클릭 시에만 나타나는 플로팅 툴바 (높이 변화 없는 absolute 오버레이로 아래 문장 밀림 현상 완전 방지) */
+/* 문장 호버 시 나타나는 플로팅 툴바 (커서 이동 시 사라지지 않도록 무간극 브릿지 및 유예 시간 적용) */
 .bubble-actions {
   position: absolute;
-  top: calc(100% + 5px);
-  z-index: 10;
+  top: 100%;
+  padding-top: 6px;
+  z-index: 20;
   display: flex;
   align-items: center;
   gap: 5px;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(-4px);
-  transition: opacity 0.16s ease, transform 0.16s ease;
+  transform: translateY(-2px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition-delay: 0.25s; /* 커서가 멘트에서 버튼으로 이동할 때 사라짐 방지 유예 시간 */
   white-space: nowrap;
+}
+
+/* 멘트(bubble)와 버튼 사이의 마우스 이동 구간을 이어주는 투명 히트 브릿지 */
+.bubble-actions::before {
+  content: "";
+  position: absolute;
+  top: -12px;
+  left: -8px;
+  right: -8px;
+  bottom: -4px;
+  z-index: -1;
 }
 
 .message-row.ai .bubble-actions {
@@ -783,11 +796,15 @@ button, input, select, textarea {
   justify-content: flex-end;
 }
 
-/* 오직 커서를 올렸을 때(:hover)만 일관되게 나타나도록 통일 (클릭으로 인한 상시 노출 불일치 원천 차단) */
-.message-row:hover .bubble-actions {
+/* 멘트 행, 버블, 또는 버튼 영역에 마우스가 있을 때 즉시 안정적으로 표시 유지 */
+.message-row:hover .bubble-actions,
+.bubble-wrap:hover .bubble-actions,
+.bubble:hover + .bubble-actions,
+.bubble-actions:hover {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
+  transition-delay: 0s;
 }
 
 .btn-bubble-action {

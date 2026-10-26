@@ -684,6 +684,35 @@ function showToast(message) {
   }, 2600);
 }
 
+function copyTextToClipboard(text, onSuccess) {
+  if (!text) return;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      if (onSuccess) onSuccess();
+    }).catch(() => fallbackCopy(text, onSuccess));
+  } else {
+    fallbackCopy(text, onSuccess);
+  }
+}
+
+function fallbackCopy(text, onSuccess) {
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    ta.style.top = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    if (onSuccess) onSuccess();
+  } catch (err) {
+    console.error("Copy failed:", err);
+  }
+}
+
 function formatNow() {
   const now = new Date();
   return now.toLocaleString("en-US", {
@@ -787,6 +816,21 @@ function appendMessage(role, text, recordInSession = true) {
     });
     actions.appendChild(shadowBtn);
   }
+
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "btn-bubble-action";
+  copyBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
+  copyBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    copyTextToClipboard(text, () => {
+      copyBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span style="color:#22c55e;">Copied!</span>`;
+      showToast("Copied sentence to clipboard!");
+      setTimeout(() => {
+        copyBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
+      }, 1500);
+    });
+  });
+  actions.appendChild(copyBtn);
 
   const saveSentenceBtn = document.createElement("button");
   saveSentenceBtn.className = "btn-bubble-action";
@@ -982,6 +1026,20 @@ function renderCoachingFeedback(coaching) {
     speakText(primarySentence);
   });
 
+  const btnCopyPrimary = document.createElement("button");
+  btnCopyPrimary.className = "btn-bubble-action";
+  btnCopyPrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
+  btnCopyPrimary.addEventListener("click", (e) => {
+    e.stopPropagation();
+    copyTextToClipboard(primarySentence, () => {
+      btnCopyPrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span style="color:#22c55e;">Copied!</span>`;
+      showToast(`Copied "Grammar Fix" to clipboard!`);
+      setTimeout(() => {
+        btnCopyPrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
+      }, 1500);
+    });
+  });
+
   const btnSavePrimary = document.createElement("button");
   btnSavePrimary.className = "btn-bubble-action";
   btnSavePrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
@@ -998,6 +1056,7 @@ function renderCoachingFeedback(coaching) {
   });
 
   primaryBtnGroup.appendChild(btnListenPrimary);
+  primaryBtnGroup.appendChild(btnCopyPrimary);
   primaryBtnGroup.appendChild(btnSavePrimary);
   primaryTop.appendChild(primaryBadge);
   primaryTop.appendChild(primaryBtnGroup);
@@ -1058,6 +1117,20 @@ function renderCoachingFeedback(coaching) {
         speakText(ex.phrase);
       });
 
+      const btnCopyAlt = document.createElement("button");
+      btnCopyAlt.className = "btn-bubble-action";
+      btnCopyAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
+      btnCopyAlt.addEventListener("click", (e) => {
+        e.stopPropagation();
+        copyTextToClipboard(ex.phrase, () => {
+          btnCopyAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg><span style="color:#22c55e;">Copied!</span>`;
+          showToast(`Copied "Alternative ${idx + 1}" to clipboard!`);
+          setTimeout(() => {
+            btnCopyAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
+          }, 1500);
+        });
+      });
+
       const btnSaveAlt = document.createElement("button");
       btnSaveAlt.className = "btn-bubble-action";
       btnSaveAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
@@ -1074,6 +1147,7 @@ function renderCoachingFeedback(coaching) {
       });
 
       altBtns.appendChild(btnListenAlt);
+      altBtns.appendChild(btnCopyAlt);
       altBtns.appendChild(btnSaveAlt);
       altTop.appendChild(altLabel);
       altTop.appendChild(altBtns);
