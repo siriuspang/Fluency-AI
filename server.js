@@ -1260,7 +1260,8 @@ function extractFirstJsonObject(rawStr) {
 }
 
 function formatFullCoachingPayload(parsed, userMessage, localGrammar, levelKey) {
-  const directFix = (parsed?.direct_fix || localGrammar.corrected || userMessage).trim();
+  let directFix = (parsed?.direct_fix || localGrammar.corrected || userMessage).trim();
+  directFix = directFix.replace(/\bneutral\s+conversations?\b/gi, "natural conversations");
   const casualNative = (parsed?.casual_native || localGrammar.correctedVariants?.[1]?.sentence || directFix).trim();
   const fluentPolite = (parsed?.fluent_polite || localGrammar.correctedVariants?.[2]?.sentence || directFix).trim();
 

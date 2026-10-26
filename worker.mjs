@@ -848,7 +848,9 @@ Respond ONLY with a valid JSON object matching this schema (no markdown fences, 
                   try {
                     const parsedCoach = JSON.parse(jsonMatch[0]);
                     if (parsedCoach.direct_fix && typeof parsedCoach.direct_fix === "string") {
-                      const cleanFix = parsedCoach.direct_fix.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
+                      let cleanFix = parsedCoach.direct_fix.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
+                      // Post-fix common phonetic ambiguity in AI conversations (neutral conversations -> natural conversations)
+                      cleanFix = cleanFix.replace(/\bneutral\s+conversations?\b/gi, "natural conversations");
                       if (cleanFix.length > 0) {
                         finalDirectFix = cleanFix;
 
