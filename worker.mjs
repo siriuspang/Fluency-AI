@@ -682,29 +682,27 @@ export default {
         if (env && env.AI) {
           aiDebugInfo.called = true;
           try {
-            const systemPrompt = `You are ${partnerName}, an authentic, empathetic native English conversation partner in a real-time voice chat following the Pipecat conversational architecture.
-Scenario: "${scenarioTitle}". Learner Level: "${learnerLevel}".
+            // ==================== PIPECAT & LIVEKIT CONVERSATIONAL VOICE PIPELINE ====================
+            // Dedicated Voice Dialogue Agent (Pure spoken conversation without grammar pollution)
+            const voiceSystemPrompt = `You are ${partnerName}, an authentic, warm native English speaker having a casual 1-on-1 voice conversation with a friend. Scenario: "${scenarioTitle}".
 
-CRITICAL INSTRUCTIONS:
-1. "reply": Spoken response directly to the user (1-2 natural sentences, then ONE engaging follow-up question).
-   - Talk like a genuine human friend, NOT an English teacher or AI assistant.
-   - Even if the user made spelling mistakes or typos (e.g. "rigting" -> writing, "undesodn" -> understand, "chung-ju" -> Chungju), warmly understand what they meant and respond to their MEANING.
-   - NEVER mention typos, spelling, grammar errors, or tests in "reply". Never say "I think you made a typo".
-2. "follow_up_hint": 1 natural sentence the user could say in response to your question.
-3. "is_grammar_perfect": boolean (false if the user had ANY typo, spelling mistake, or grammar error; true ONLY if 100% flawless).
-4. "direct_fix": The user's exact sentence, with all typos, spelling, grammar, and capitalization mistakes corrected into clean standard English. Must be a complete sentence.
-5. "casual_native": How a native speaker would say this naturally in casual everyday conversation (1 complete sentence).
-6. "fluent_polite": How a native speaker would say this in polished, expressive English (1 complete sentence).
-7. "grammar_explanation": In friendly Korean (한국어), clearly explain what was corrected (e.g. spelling of "writing", capitalization, contractions). If error-free, write "문장의 어법과 표현이 모두 완벽합니다!".
-8. "pronunciation_tips": 1-2 practical tips: [{"word": "word (phonetic)", "tip": "tip"}].
-9. "key_vocabulary": 1-2 useful words/idioms: [{"word": "phrase", "meaning": "Korean meaning"}].
+VOICE CONVERSATION RULES:
+1. Speak naturally like a real human friend over coffee (use casual, natural everyday spoken English).
+2. React genuinely to what the user said with emotional warmth (e.g. "Oh, nice!", "That sounds amazing!", "I know what you mean!").
+3. NEVER repeat the user's words back to them, and NEVER say things like "I think you mean..." or "I mean writing".
+4. NEVER mention grammar, typos, spelling mistakes, English practice, lessons, or tests. You are NOT an AI assistant or teacher; you are a friend.
+5. Even if the user made typos or small slips of the tongue, effortlessly understand their intended meaning without ever mentioning the typo.
+6. Keep your response to 1-2 spoken sentences, followed by ONE natural, open-ended question to keep the chat going.
+7. Output ONLY your spoken words directly. No quotes, no markdown, no JSON.`;
 
-Output ONLY a JSON object matching these keys.`;
-
-            const userPrompt = `Recent conversation:
-${history.slice(-4).map(m => (m.role === 'user' ? 'User: ' : `${partnerName}: `) + m.text).join('\n')}
-
-User just said: "${userMessage}"`;
+            const voiceMessages = [
+              { role: "system", content: voiceSystemPrompt },
+              ...history.slice(-6).map(m => ({
+                role: m.role === 'user' ? 'user' : 'assistant',
+                content: m.text
+              })),
+              { role: "user", content: userMessage }
+            ];
 
             const candidateModels = [
               "@cf/meta/llama-3.2-3b-instruct",
@@ -712,20 +710,18 @@ User just said: "${userMessage}"`;
               "@cf/meta/llama-3.2-1b-instruct",
               "@cf/mistral/mistral-7b-instruct-v0.2"
             ];
-            let aiRes = null;
+
+            let aiVoiceRes = null;
             let lastErr = null;
             let usedModel = null;
             for (const m of candidateModels) {
               try {
-                aiRes = await env.AI.run(m, {
-                  messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userPrompt }
-                  ],
-                  max_tokens: 500,
-                  temperature: 0.4
+                aiVoiceRes = await env.AI.run(m, {
+                  messages: voiceMessages,
+                  max_tokens: 120,
+                  temperature: 0.6
                 });
-                if (aiRes && (aiRes.response || aiRes.choices || typeof aiRes === "string")) {
+                if (aiVoiceRes && (aiVoiceRes.response || aiVoiceRes.choices || typeof aiVoiceRes === "string")) {
                   usedModel = m;
                   break;
                 }
@@ -734,67 +730,16 @@ User just said: "${userMessage}"`;
               }
             }
             aiDebugInfo.usedModel = usedModel;
-            if (!aiRes && lastErr) {
-              throw new Error(lastErr);
-            }
 
-            let parsed = null;
-            if (aiRes) {
-              if (aiRes.response && typeof aiRes.response === "object") {
-                parsed = aiRes.response;
-              } else {
-                const rawText = (aiRes.choices && aiRes.choices[0] && aiRes.choices[0].message && aiRes.choices[0].message.content) ||
-                                (typeof aiRes.response === "string" ? aiRes.response : "") ||
-                                (typeof aiRes === "string" ? aiRes : "");
-                if (rawText) {
-                  const cleaned = rawText.replace(/```json/gi, "").replace(/```/g, "").trim();
-                  const s = cleaned.indexOf("{");
-                  const e = cleaned.lastIndexOf("}");
-                  if (s !== -1 && e > s) {
-                    try {
-                      parsed = JSON.parse(cleaned.slice(s, e + 1));
-                    } catch (pe) {
-                      console.warn("AI JSON parse fail:", pe.message);
-                    }
-                  }
+            if (aiVoiceRes) {
+              let rawVoiceText = (aiVoiceRes.choices && aiVoiceRes.choices[0] && aiVoiceRes.choices[0].message && aiVoiceRes.choices[0].message.content) ||
+                                (typeof aiVoiceRes.response === "string" ? aiVoiceRes.response : "") ||
+                                (typeof aiVoiceRes === "string" ? aiVoiceRes : "");
+              if (rawVoiceText) {
+                rawVoiceText = rawVoiceText.replace(/^["'`\s]+|["'`\s]+$/g, "").trim();
+                if (!/^(as an ai|i am an ai|i cannot|i think you mean)\b/i.test(rawVoiceText) && rawVoiceText.length > 5) {
+                  finalReply = rawVoiceText;
                 }
-              }
-            }
-
-            if (parsed) {
-              if (parsed.reply && typeof parsed.reply === "string" && parsed.reply.trim()) {
-                finalReply = parsed.reply.trim();
-              }
-              if (parsed.follow_up_hint && typeof parsed.follow_up_hint === "string" && parsed.follow_up_hint.trim()) {
-                finalHint = parsed.follow_up_hint.trim();
-              }
-              if (typeof parsed.is_grammar_perfect === "boolean") {
-                finalIsPerfect = grammarResult.isPerfect && parsed.is_grammar_perfect;
-              }
-              if (parsed.direct_fix && typeof parsed.direct_fix === "string" && parsed.direct_fix.trim()) {
-                finalDirectFix = parsed.direct_fix.trim();
-              } else {
-                finalDirectFix = grammarResult.corrected;
-              }
-
-              let casualOpt = (parsed.casual_native && typeof parsed.casual_native === "string" && parsed.casual_native.trim())
-                ? parsed.casual_native.trim()
-                : (convResult.betterExpressions[0]?.phrase || finalDirectFix);
-
-              let fluentOpt = (parsed.fluent_polite && typeof parsed.fluent_polite === "string" && parsed.fluent_polite.trim())
-                ? parsed.fluent_polite.trim()
-                : (convResult.betterExpressions[1]?.phrase || finalDirectFix);
-
-              finalVariants = [
-                { label: "1. 내 문장 어법 교정 (Direct Fix)", sentence: finalDirectFix },
-                { label: "추천 1 · Casual Native", sentence: casualOpt },
-                { label: "추천 2 · Fluent & Expressive", sentence: fluentOpt }
-              ];
-
-              if (parsed.grammar_explanation && typeof parsed.grammar_explanation === "string" && parsed.grammar_explanation.trim() && !finalIsPerfect) {
-                finalExplanation = parsed.grammar_explanation.trim();
-              } else {
-                finalExplanation = grammarResult.explanation;
               }
             }
           } catch (aiErr) {
