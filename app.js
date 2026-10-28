@@ -428,6 +428,17 @@ const dom = {
   quickLevelSelect: document.getElementById("quickLevelSelect"),
   startLiveOrbBtn: document.getElementById("startLiveOrbBtn"),
   saveSessionBtn: document.getElementById("saveSessionBtn"),
+  openSavedChatsBtn: document.getElementById("openSavedChatsBtn"),
+  savedConversationsModal: document.getElementById("savedConversationsModal"),
+  closeSavedConvBtn: document.getElementById("closeSavedConvBtn"),
+  savedConvListView: document.getElementById("savedConvListView"),
+  savedConvList: document.getElementById("savedConvList"),
+  savedConvDetailView: document.getElementById("savedConvDetailView"),
+  backToSavedListBtn: document.getElementById("backToSavedListBtn"),
+  savedDetailMeta: document.getElementById("savedDetailMeta"),
+  savedChatTranscript: document.getElementById("savedChatTranscript"),
+  resumeSavedChatBtn: document.getElementById("resumeSavedChatBtn"),
+  deleteCurrentSavedChatBtn: document.getElementById("deleteCurrentSavedChatBtn"),
   chatStream: document.getElementById("chatStream"),
   hintText: document.getElementById("hintText"),
   listenHintBtn: document.getElementById("listenHintBtn"),
@@ -2585,6 +2596,194 @@ async function callZeroKeyBackendChatAPI(userMessage, signal = null) {
   return data;
 }
 
+
+// ==================== SAVED CONVERSATIONS STORE & VIEWER ====================
+function getSavedConversations() {
+  try {
+    const raw = localStorage.getItem("fluency_saved_conversations");
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function persistSavedConversations(list) {
+  try {
+    localStorage.setItem("fluency_saved_conversations", JSON.stringify(list));
+  } catch (e) {}
+}
+
+let activeViewingConvId = null;
+
+function saveCurrentConversation() {
+  const msgs = state.currentMessages || [];
+  const hasUserMsg = msgs.some((m) => m.role === "user");
+  if (!hasUserMsg) {
+    showToast("저장할 대화 내용이 아직 없습니다! AI와 대화를 나눈 후 눌러주세요.");
+    return;
+  }
+
+  const list = getSavedConversations();
+  const firstUser = msgs.find((m) => m.role === "user");
+  const lastAi = [...msgs].reverse().find((m) => m.role === "ai");
+  const title = firstUser ? `"${firstUser.text.slice(0, 36)}${firstUser.text.length > 36 ? "..." : ""}"` : "English Conversation";
+  const preview = lastAi ? lastAi.text.slice(0, 90) : "";
+
+  const existingIdx = list.findIndex((c) => c.id === state.currentSessionId);
+  const record = {
+    id: state.currentSessionId,
+    title,
+    timestamp: formatNow(),
+    preview,
+    messageCount: msgs.length,
+    messages: JSON.parse(JSON.stringify(msgs)),
+    scenario: SCENARIOS[state.scenario]?.title || "Daily Talk"
+  };
+
+  if (existingIdx >= 0) {
+    list[existingIdx] = record;
+  } else {
+    list.unshift(record);
+  }
+
+  persistSavedConversations(list);
+  showToast("💾 대화 내용이 저장되었습니다! (클릭하여 대화 목록 보기)", () => {
+    openSavedConversationsModal();
+  });
+}
+
+function openSavedConversationsModal() {
+  if (!dom.savedConversationsModal) return;
+  renderSavedConversationsList();
+  showSavedListView();
+  dom.savedConversationsModal.classList.remove("hidden");
+}
+
+function closeSavedConversationsModal() {
+  if (!dom.savedConversationsModal) return;
+  dom.savedConversationsModal.classList.add("hidden");
+}
+
+function showSavedListView() {
+  activeViewingConvId = null;
+  if (dom.savedConvListView) dom.savedConvListView.classList.remove("hidden");
+  if (dom.savedConvDetailView) dom.savedConvDetailView.classList.add("hidden");
+}
+
+function renderSavedConversationsList() {
+  if (!dom.savedConvList) return;
+  const list = getSavedConversations();
+  dom.savedConvList.innerHTML = "";
+
+  if (list.length === 0) {
+    dom.savedConvList.innerHTML = `
+      <div class="saved-conv-empty">
+        <div style="font-size:2rem;margin-bottom:8px;">💬</div>
+        <strong>아직 저장된 대화가 없습니다.</strong><br/>
+        대화창에서 대화를 나눈 뒤 상단 <strong>Save</strong> 버튼을 누르면 전체 대화가 이곳에 안전하게 보관됩니다.
+      </div>
+    `;
+    return;
+  }
+
+  list.forEach((conv) => {
+    const card = document.createElement("div");
+    card.className = "saved-conv-card";
+    card.innerHTML = `
+      <div class="saved-conv-card-top">
+        <div class="saved-conv-card-title">
+          <span>💬</span>
+          <span>${escapeHtml(conv.title)}</span>
+        </div>
+        <div class="saved-conv-card-meta">
+          <span>${conv.timestamp}</span>
+        </div>
+      </div>
+      <div class="saved-conv-card-preview">${escapeHtml(conv.preview || "(대화 내용)")}</div>
+      <div class="saved-conv-card-bottom">
+        <span>총 ${conv.messageCount}개의 대화 메시지</span>
+        <span class="saved-conv-open-hint">
+          <span>대화 내용 보기</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </span>
+      </div>
+    `;
+    card.addEventListener("click", () => {
+      viewSavedConversationDetail(conv.id);
+    });
+    dom.savedConvList.appendChild(card);
+  });
+}
+
+function viewSavedConversationDetail(convId) {
+  const list = getSavedConversations();
+  const conv = list.find((c) => c.id === convId);
+  if (!conv) return;
+
+  activeViewingConvId = convId;
+  if (dom.savedConvListView) dom.savedConvListView.classList.add("hidden");
+  if (dom.savedConvDetailView) dom.savedConvDetailView.classList.remove("hidden");
+
+  if (dom.savedDetailMeta) {
+    dom.savedDetailMeta.textContent = `${conv.timestamp} · 총 ${conv.messages.length}개 메시지`;
+  }
+
+  if (dom.savedChatTranscript) {
+    dom.savedChatTranscript.innerHTML = "";
+    conv.messages.forEach((m) => {
+      const row = document.createElement("div");
+      row.className = `message-row ${m.role}`;
+      if (m.role === "ai") {
+        const avatar = document.createElement("div");
+        avatar.className = "avatar";
+        avatar.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z"/></svg>`;
+        row.appendChild(avatar);
+      }
+      const wrap = document.createElement("div");
+      wrap.className = "bubble-wrap";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = m.text;
+      wrap.appendChild(bubble);
+      row.appendChild(wrap);
+      dom.savedChatTranscript.appendChild(row);
+    });
+  }
+}
+
+function resumeSavedConversation() {
+  if (!activeViewingConvId) return;
+  const list = getSavedConversations();
+  const conv = list.find((c) => c.id === activeViewingConvId);
+  if (!conv || !conv.messages || conv.messages.length === 0) return;
+
+  state.currentSessionId = conv.id;
+  state.currentMessages = JSON.parse(JSON.stringify(conv.messages));
+  dom.chatStream.innerHTML = "";
+  conv.messages.forEach((m) => {
+    appendMessage(m.role, m.text, false);
+  });
+
+  closeSavedConversationsModal();
+  showToast("📂 저장된 대화를 불러왔습니다! 이어서 말씀해 보세요.");
+  if (dom.userInput) {
+    dom.userInput.focus();
+  }
+}
+
+function deleteCurrentSavedConversation() {
+  if (!activeViewingConvId) return;
+  if (!confirm("이 대화 기록을 정말 삭제하시겠습니까?")) return;
+
+  let list = getSavedConversations();
+  list = list.filter((c) => c.id !== activeViewingConvId);
+  persistSavedConversations(list);
+
+  showToast("대화가 삭제되었습니다.");
+  showSavedListView();
+  renderSavedConversationsList();
+}
+
 // ==================== SEND MESSAGE FLOW ====================
 async function handleSendUserMessage(overrideText = null) {
     const text = (overrideText !== null ? overrideText : dom.userInput.value).trim();
@@ -3674,9 +3873,7 @@ function bindEvents() {
     dom.toggleLiveStreamBtn.addEventListener("click", toggleLiveVoiceSession);
   }
 
-  dom.saveSessionBtn.addEventListener("click", () => {
-    saveCurrentSessionToArchive(true);
-  });
+  dom.saveSessionBtn.addEventListener("click", saveCurrentConversation);
 
   dom.bookmarkCurrentCorrectionBtn.addEventListener("click", () => {
     if (!state.currentCoaching) return;
@@ -3721,10 +3918,7 @@ function bindEvents() {
     dom.userInput.style.height = Math.min(dom.userInput.scrollHeight, 120) + "px";
   });
 
-  dom.resetChatBtn.addEventListener("click", () => {
-    if (state.currentMessages && state.currentMessages.length > 1) {
-      saveCurrentSessionToArchive(false);
-    }
+  function handleStartNewConversation() {
     if (state.activeAudio) {
       try { state.activeAudio.pause(); } catch (e) {}
       state.activeAudio = null;
@@ -3732,16 +3926,33 @@ function bindEvents() {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
+    if (state.isRecording) {
+      stopVoiceCapture();
+    }
     if (dom.userInput) {
       dom.userInput.value = "";
       dom.userInput.style.height = "auto";
     }
-    loadScenario(state.scenario);
-    showToast("🌱 New conversation started!");
+
+    state.currentSessionId = "session-" + Date.now();
+    state.currentMessages = [];
+    state.turnCount = 1;
+    if (dom.turnCount) dom.turnCount.textContent = "1";
+
+    const sc = SCENARIOS[state.scenario] || SCENARIOS.casual;
+    dom.chatStream.innerHTML = "";
+    appendMessage("ai", sc.openingMessage);
+    dom.hintText.textContent = `"${sc.starterHint}"`;
+
+    state.currentCoaching = sc.initialCoaching;
+    renderCoachingFeedback(sc.initialCoaching);
+
+    showToast("🌱 대화창이 초기화되었습니다. 새로운 대화를 시작하세요!");
     setTimeout(() => {
       if (dom.userInput) dom.userInput.focus();
-    }, 100);
-  });
+    }, 80);
+  }
+  dom.resetChatBtn.addEventListener("click", handleStartNewConversation);
 
   // ==================== HISTORY & REVIEW NOTEBOOK EVENTS ====================
   dom.openHistoryBtn.addEventListener("click", () => {
