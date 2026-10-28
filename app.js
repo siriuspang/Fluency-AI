@@ -2382,14 +2382,58 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 8. General Questions (Why, How, What, Can you, Do you)
-  if (/\?$/.test(clean) || /^(what|how|why|when|where|who|can you|could you|do you|are you) /i.test(clean)) {
-    reply = `That's a great question to think about! In my experience, discussing ideas openly makes learning English so much more fun. How about you—what's your take?`;
-    followUpHint = "I'm always curious to learn new perspectives and practice asking questions naturally.";
+  // 8. Name / Self-Introduction / "What's your name?" / "My name is..."
+  const nameMatch = clean.match(/(?:my name is|i'm|i am)\s+([a-zA-Z가-힣]+)/i);
+  const userName = nameMatch ? nameMatch[1].replace(/[,.!?]/g, "") : "";
+  const asksPartnerName = /what(?:'?s|\s+is)\s+your\s+name|who\s+are\s+you/i.test(lower);
+
+  if (asksPartnerName || (nameMatch && /hi|hello|meet/i.test(lower))) {
+    const pName = partnerName || (modelMeta && modelMeta.displayName) || "Alloy";
+    if (userName) {
+      reply = `Nice to meet you, ${userName}! My name is ${pName}. It's awesome to practice English with you—how is your day going so far?`;
+      followUpHint = `It's great to meet you too, ${pName}! My day has been pretty good.`;
+    } else {
+      reply = `I'm ${pName}, your friendly English conversation partner! It's so nice to meet you. What's on your mind today?`;
+      followUpHint = "Nice to meet you! I'm hoping to get some English speaking practice today.";
+    }
+    pronunciationTips = [
+      { word: "Pleasure (ˈpleʒ.ɚ)", tip: "Soft 'zh' sound in the middle: 'PLEZH-er'." }
+    ];
+    keyVocabulary = [
+      { word: "pleasure to meet you", meaning: "만나서 반갑습니다 (정중하고 따뜻한 인사)" }
+    ];
     return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
   }
 
-  // 9. General Dynamic Contextual Fallback (Natural, Empathetic, Non-Robotic)
+  // 9. Reaction & Surprise ("Are you kidding me?", "Are you serious?", "No way!")
+  if (/are\s+you\s+(kidding|serious|joking|for\s+real)|no\s+way|you\s+must\s+be\s+kidding/i.test(lower)) {
+    reply = `Haha, not at all! I'm completely serious, but I love your reaction! Why did that catch you off guard?`;
+    followUpHint = "I honestly didn't expect that answer, but it's really interesting!";
+    pronunciationTips = [
+      { word: "Kidding (ˈkɪd.ɪŋ)", tip: "Keep the short 'i' crisp: 'KID-ing'." }
+    ];
+    keyVocabulary = [
+      { word: "catch off guard", meaning: "불시에 놀라게 하다, 예상치 못하게 하다" },
+      { word: "no way", meaning: "설마, 말도 안 돼 (자연스러운 감탄사)" }
+    ];
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
+  }
+
+  // 10. General Questions (Why, How, What, Can you, Do you)
+  if (/\?$/.test(clean) || /^(what|how|why|when|where|who|can you|could you|do you|are you) /i.test(clean)) {
+    const questionReplies = [
+      `That's a thoughtful question! To be honest, I really enjoy hearing how different people think about it. What led you to wonder about that?`,
+      `That's such an interesting thing to ask! I'd love to explore that with you—what's your own first instinct on it?`,
+      `Great question! I think looking at things from a fresh angle makes every conversation fun. What's your take on it?`,
+      `I love that you're curious about that! Honestly, there are so many ways to see it. How do you personally feel about it?`
+    ];
+    const qHash = clean.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+    reply = questionReplies[qHash % questionReplies.length];
+    followUpHint = "I was just thinking about it earlier today, and I wanted to hear your perspective.";
+    return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
+  }
+
+  // 11. General Dynamic Contextual Fallback (Natural, Empathetic, Non-Robotic)
   const dynamicReplies = [
     `That's really interesting! What's something coming up this week that you're looking forward to?`,
     `I appreciate you sharing that with me! How do you usually like spending your free hours?`,
@@ -2512,17 +2556,12 @@ async function handleSendUserMessage(overrideText = null) {
       } else {
         try {
           const controller = new AbortController();
-          const tId = setTimeout(() => controller.abort(), 8500);
+          const tId = setTimeout(() => controller.abort(), 15000);
           result = await callZeroKeyBackendChatAPI(text, controller.signal);
           clearTimeout(tId);
         } catch (proxyErr) {
-          try {
-            console.info("Directly connecting to Zero-Key Real LLM conversation engine...");
-            result = await callZeroKeyClientLLM(text);
-          } catch (clientLlmErr) {
-            console.warn("Zero-key LLM failover notice, using contextual local engine:", clientLlmErr);
-            result = generateLocalDemoCoaching(text);
-          }
+          console.warn("Backend chat API timeout or error, falling back to smart contextual engine:", proxyErr);
+          result = generateLocalDemoCoaching(text);
         }
       }
     }
