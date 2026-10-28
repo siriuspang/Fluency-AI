@@ -415,6 +415,24 @@ const state = {
 };
 
 // DOM References
+
+// ==================== NATURAL SPEECH SYNTHESIS ENGINE (PRE-CACHED VOICES) ====================
+let appVoicesCache = [];
+function loadSystemVoices() {
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    const v = window.speechSynthesis.getVoices();
+    if (v && v.length > 0) {
+      appVoicesCache = v;
+    }
+  }
+}
+if (typeof window !== "undefined" && "speechSynthesis" in window) {
+  loadSystemVoices();
+  window.speechSynthesis.onvoiceschanged = () => {
+    loadSystemVoices();
+  };
+}
+
 const dom = {
   scenarioList: document.getElementById("scenarioList"),
   activeScenarioIcon: document.getElementById("activeScenarioIcon"),
@@ -423,6 +441,9 @@ const dom = {
   headerProviderIcon: document.getElementById("headerProviderIcon"),
   quickModelSelect: document.getElementById("quickModelSelect"),
   quickVoicePersonaSelect: document.getElementById("quickVoicePersonaSelect"),
+  audioToggleBtn: document.getElementById("audioToggleBtn"),
+  audioToggleIcon: document.getElementById("audioToggleIcon"),
+  audioToggleLabel: document.getElementById("audioToggleLabel"),
   quickModeIcon: document.getElementById("quickModeIcon"),
   quickModeSelect: document.getElementById("quickModeSelect"),
   quickLevelSelect: document.getElementById("quickLevelSelect"),
@@ -2942,8 +2963,10 @@ async function handleSendUserMessage(overrideText = null) {
 
 // ==================== REAL AI LIVE VOICES (BUILT-IN NEURAL TTS + GEMINI/OPENAI TTS + MULTI-VOICE FALLBACK) ====================
 async function speakText(text, customRate = null) {
-  const rate = customRate || state.speechRate;
-  const { voiceProvider, voiceName } = getParsedVoicePersona();
+  if (!text || !text.trim()) return;
+
+  const rate = customRate || state.speechRate || 1.0;
+  const isMale = (state.voicePersona === "male");
 
   // Stop any currently playing audio or speechSynthesis so voices never overlap
   if (state.activeAudio) {
@@ -2957,21 +2980,10 @@ async function speakText(text, customRate = null) {
     window.speechSynthesis.cancel();
   }
 
-  let targetEngine = state.ttsEngine;
-  if (targetEngine === "auto-ai") {
-    if (voiceProvider === "openai" && hasOpenAIKey()) {
-      targetEngine = "openai-tts";
-    } else if (voiceProvider === "gemini" && hasGeminiKey()) {
-      targetEngine = "gemini-3.8-flash-tts";
-    } else {
-      targetEngine = "builtin-neural";
-    }
-  }
-
-  // 1. OpenAI ChatGPT Voice Mode TTS (when user explicitly added an OpenAI API key)
-  if (targetEngine === "openai-tts" && hasOpenAIKey()) {
+  // 1. If user provided their own OpenAI API Key in Settings, use OpenAI Cloud TTS
+  if (state.ttsEngine === "openai-tts" && hasOpenAIKey()) {
     try {
-      const openAiVoice = voiceProvider === "openai" ? voiceName : "coral";
+      const openAiVoice = isMale ? "ash" : "coral";
       const ttsResp = await fetch("https://api.openai.com/v1/audio/speech", {
         method: "POST",
         headers: {
@@ -2982,7 +2994,7 @@ async function speakText(text, customRate = null) {
           model: "gpt-4o-mini-tts",
           voice: openAiVoice,
           input: text,
-          instructions: "Speak naturally, warmly, and conversationally like an engaging native English partner in Live Voice Mode.",
+          instructions: "Speak naturally, warmly, and conversationally like a native English partner.",
           speed: rate
         })
       });
@@ -2996,180 +3008,76 @@ async function speakText(text, customRate = null) {
         return;
       }
     } catch (e) {
-      console.warn("OpenAI TTS error, falling back to Built-in Neural TTS:", e);
+      console.warn("OpenAI TTS notice, falling back to browser synthesis:", e);
     }
   }
 
-  // 2. Google Gemini 3.8 Live / Flash TTS (when user explicitly added a Gemini API key)
-  if (targetEngine.startsWith("gemini-3.8-") && hasGeminiKey()) {
-    try {
-      const geminiVoice = voiceProvider === "gemini" ? voiceName : "Kore";
-      const ttsResp = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Api-Revision": "2026-05-20",
-          "x-goog-api-key": state.apiKey.trim()
-        },
-        body: JSON.stringify({
-          model: targetEngine,
-          input: [
-            {
-              type: "user_input",
-              content: [
-                {
-                  type: "text",
-                  text: text,
-                  annotations: [
-                    {
-                      type: "speech_metadata",
-                      style: "casual, friendly"
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          response_format: { type: "audio" },
-          generation_config: {
-            speech_config: [{ voice: geminiVoice }]
-          }
-        })
-      });
-
-      if (ttsResp.ok) {
-        const ttsData = await ttsResp.json();
-        let base64Audio = ttsData.output_audio?.data;
-        if (!base64Audio && Array.isArray(ttsData.steps)) {
-          for (const step of ttsData.steps) {
-            if (step.type === "model_output" && Array.isArray(step.content)) {
-              const audioPart = step.content.find((c) => c.type === "audio" && c.data);
-              if (audioPart) {
-                base64Audio = audioPart.data;
-                break;
-              }
-            }
-          }
-        }
-        if (base64Audio) {
-          const audio = new Audio(`data:audio/wav;base64,${base64Audio}`);
-          audio.playbackRate = rate;
-          state.activeAudio = audio;
-          await audio.play();
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn("Gemini TTS error, falling back to Built-in Neural TTS:", e);
-    }
-  }
-
-  // 3. ZERO-API-KEY BUILT-IN NEURAL VOICE SERVER (/api/tts — Pristine Natural Microsoft Neural Voice)
-  if (targetEngine !== "browser") {
-    try {
-      const speakToken = (state.speakToken = (state.speakToken || 0) + 1);
-      const cleanText = text.trim();
-      const resp = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: cleanText,
-          voice: state.voicePersona,
-          rate
-        })
-      });
-      if (!resp.ok) throw new Error(`TTS HTTP ${resp.status}`);
-      if (state.speakToken !== speakToken) return;
-
-      const blob = await resp.blob();
-      if (state.speakToken !== speakToken) return;
-
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio();
-      audio.preload = "auto";
-      audio.src = audioUrl;
-      state.activeAudio = audio;
-
-      // Ensure the audio frames are pre-buffered so playback starts 100% smoothly without any initial stutter
-      await new Promise((resolve) => {
-        if (audio.readyState >= 3) {
-          resolve();
-          return;
-        }
-        audio.oncanplay = () => resolve();
-        audio.onerror = () => resolve();
-        setTimeout(resolve, 80);
-      });
-
-      if (state.speakToken !== speakToken) return;
-      await audio.play();
-      return;
-    } catch (e) {
-      console.warn("Built-in Neural TTS server notice, falling back to multi-voice browser speech:", e);
-    }
-  }
-
-  // 4. Guaranteed Gender-Accurate Natural SpeechSynthesis (Female vs Male)
+  // 2. Guaranteed Gender-Separated Natural Web Speech Synthesis
   if ("speechSynthesis" in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    const isMale = (state.voicePersona === "male");
-    const allVoices = window.speechSynthesis.getVoices();
+    loadSystemVoices();
+    let voices = appVoicesCache.length > 0 ? appVoicesCache : window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) {
+      voices = window.speechSynthesis.getVoices() || [];
+    }
+
+    const enPool = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith("en"));
+    const pool = enPool.length > 0 ? enPool : voices;
     let selectedVoice = null;
 
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+
     if (isMale) {
-      utterance.lang = "en-US";
-      utterance.pitch = 0.86; // Deep, confident masculine pitch
-      utterance.rate = Math.min(1.4, Math.max(0.7, rate * 0.98));
+      // 👨 Deep, resonant masculine baritone pitch (0.78)
+      utterance.pitch = 0.78;
+      utterance.rate = Math.min(1.3, Math.max(0.7, rate * 0.96));
 
-      // Favored natural/neural male voices in Edge, Chrome, Safari, Windows & Mac
-      const maleFavored = [
-        "guy (natural)", "guy", "andrew (natural)", "andrew", "brian (natural)",
-        "ryan (natural)", "google uk english male", "google us english male", "daniel", "alex"
+      const malePreferred = [
+        "guy (natural)", "guy", "christopher (natural)", "christopher",
+        "eric (natural)", "eric", "andrew (natural)", "andrew",
+        "brian (natural)", "brian", "ryan (natural)", "ryan",
+        "google uk english male", "google us english male",
+        "david", "alex", "daniel", "george", "male"
       ];
-      // STRICT FILTER: Absolutely exclude any female voice or legacy robotic desktop voice
-      const excludeFemale = /desktop|zira|jenny|ava|samantha|aria|sonia|libby|karen|female|woman/i;
+      // STRICT FILTER: Absolutely exclude any female voices
+      const excludeFemale = /zira|jenny|ava|samantha|aria|sonia|libby|karen|victoria|michelle|female|woman|girl/i;
 
-      for (const name of maleFavored) {
-        selectedVoice = allVoices.find(v => v.name.toLowerCase().includes(name) && !excludeFemale.test(v.name));
+      for (const name of malePreferred) {
+        selectedVoice = pool.find(v => v.name.toLowerCase().includes(name) && !excludeFemale.test(v.name));
         if (selectedVoice) break;
       }
       if (!selectedVoice) {
-        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && /male|man/i.test(v.name) && !excludeFemale.test(v.name));
-      }
-      if (!selectedVoice) {
-        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && !excludeFemale.test(v.name));
+        selectedVoice = pool.find(v => !excludeFemale.test(v.name));
       }
     } else {
-      utterance.lang = "en-US";
-      utterance.pitch = 1.05; // Warm, natural feminine pitch
-      utterance.rate = Math.min(1.4, Math.max(0.7, rate * 1.0));
+      // 👩 Bright, warm feminine tone (1.15)
+      utterance.pitch = 1.15;
+      utterance.rate = Math.min(1.3, Math.max(0.7, rate * 1.02));
 
-      // Favored natural/neural female voices in Edge, Chrome, Safari, Windows & Mac
-      const femaleFavored = [
-        "jenny (natural)", "jenny", "ava (natural)", "ava", "samantha",
-        "aria (natural)", "aria", "google us english", "sonia (natural)"
+      const femalePreferred = [
+        "jenny (natural)", "jenny", "aria (natural)", "aria",
+        "ava (natural)", "ava", "michelle (natural)", "michelle",
+        "google us english", "samantha", "victoria", "karen", "zira", "female"
       ];
-      // STRICT FILTER: Absolutely exclude any male voice or legacy robotic desktop voice
-      const excludeMale = /desktop|david|guy|ryan|andrew|mark|daniel|brian|george|thomas|male|man/i;
+      // STRICT FILTER: Absolutely exclude any male voices
+      const excludeMale = /david|guy|andrew|brian|christopher|eric|ryan|daniel|alex|george|mark|thomas|male|man/i;
 
-      for (const name of femaleFavored) {
-        selectedVoice = allVoices.find(v => v.name.toLowerCase().includes(name) && !excludeMale.test(v.name));
+      for (const name of femalePreferred) {
+        selectedVoice = pool.find(v => v.name.toLowerCase().includes(name) && !excludeMale.test(v.name));
         if (selectedVoice) break;
       }
       if (!selectedVoice) {
-        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && /female|woman/i.test(v.name) && !excludeMale.test(v.name));
-      }
-      if (!selectedVoice) {
-        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && !excludeMale.test(v.name));
+        selectedVoice = pool.find(v => !excludeMale.test(v.name));
       }
     }
 
-    if (!selectedVoice) {
-      selectedVoice = allVoices.find(v => v.lang.startsWith("en")) || allVoices[0];
+    if (!selectedVoice && pool.length > 0) {
+      selectedVoice = pool[0];
     }
     if (selectedVoice) {
       utterance.voice = selectedVoice;
     }
+
     window.speechSynthesis.speak(utterance);
   }
 }
@@ -3800,77 +3708,87 @@ function bindEvents() {
     showToast(`Switched to ${prov === "openai" ? "ChatGPT (GPT-4o)" : "Gemini 3.8 Flash"}`);
   });
 
-  // Header Quick Voice Persona Switcher (목소리 직접 선택)
+  // Header Quick Voice Persona Switcher (Female vs Male with instant voice preview)
   if (dom.quickVoicePersonaSelect) {
+    dom.quickVoicePersonaSelect.value = state.voicePersona;
     dom.quickVoicePersonaSelect.addEventListener("change", () => {
       const selected = dom.quickVoicePersonaSelect.value;
       state.voicePersona = selected;
       localStorage.setItem("speakflow_voice_persona", selected);
       syncSettingsUI();
-      const label = selected === "male" ? "Male Voice" : "Female Voice";
+      const label = selected === "male" ? "👨 Male Voice" : "👩 Female Voice";
       showToast(`Switched to ${label}`);
-      if (state.autoSpeak) {
-        speakText(selected === "male" ? "Hello, I am your male conversation partner." : "Hello, I am your female conversation partner.");
-      }
+      // Instant audible preview demonstrating distinct gender voice
+      speakText(selected === "male" ? "Hello! I am your male conversation partner." : "Hello! I am your female conversation partner.");
     });
   }
 
-  // Header Quick Conversation Mode Switcher (Voice 모드 / Chat 모드)
-  if (dom.quickModeSelect) {
-    dom.quickModeSelect.addEventListener("change", () => {
-      const mode = dom.quickModeSelect.value;
-      state.conversationMode = mode;
-      state.autoSpeak = (mode === "voice");
-      localStorage.setItem("speakflow_conversation_mode", mode);
+  // Header Quick Audio Toggle (Voice On / Muted)
+  const syncAudioToggleBtnUI = () => {
+    if (!dom.audioToggleBtn) return;
+    if (state.autoSpeak) {
+      dom.audioToggleBtn.classList.add("active");
+      if (dom.audioToggleLabel) dom.audioToggleLabel.textContent = "Voice On";
+      if (dom.audioToggleIcon) {
+        dom.audioToggleIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`;
+      }
+    } else {
+      dom.audioToggleBtn.classList.remove("active");
+      if (dom.audioToggleLabel) dom.audioToggleLabel.textContent = "Muted";
+      if (dom.audioToggleIcon) {
+        dom.audioToggleIcon.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>`;
+      }
+    }
+  };
+  syncAudioToggleBtnUI();
+
+  if (dom.audioToggleBtn) {
+    dom.audioToggleBtn.addEventListener("click", () => {
+      state.autoSpeak = !state.autoSpeak;
       localStorage.setItem("speakflow_auto_speak", String(state.autoSpeak));
-      syncSettingsUI();
-      if (mode === "voice") {
-        showToast("Voice Mode: AI answers with native audio.");
-        const { voiceDisplayName } = getParsedVoicePersona();
-        speakText(`Voice mode on. I'm ready to speak with you!`);
+      syncAudioToggleBtnUI();
+      if (state.autoSpeak) {
+        showToast("🔊 Voice enabled: AI will read replies aloud.");
+        const isMale = (state.voicePersona === "male");
+        speakText(isMale ? "Voice enabled." : "Voice enabled.");
       } else {
-        // Stop any currently playing audio so it turns completely silent immediately
         if (state.activeAudio) {
-          try {
-            state.activeAudio.pause();
-            state.activeAudio.currentTime = 0;
-          } catch (e) {}
+          try { state.activeAudio.pause(); state.activeAudio.currentTime = 0; } catch (e) {}
           state.activeAudio = null;
         }
         if ("speechSynthesis" in window) {
           window.speechSynthesis.cancel();
         }
-        showToast("Chat Mode: Silent text messenger mode.");
+        showToast("🔇 Voice muted: Silent text mode.");
       }
     });
   }
 
-  // Header Quick Conversation Level Switcher (Basic / Intermediate / Advanced)
-  if (dom.quickLevelSelect) {
-    dom.quickLevelSelect.addEventListener("change", () => {
-      state.learnerLevel = normalizeLearnerLevel(dom.quickLevelSelect.value);
-      localStorage.setItem("speakflow_learner_level", state.learnerLevel);
-      syncSettingsUI();
-      const levelCfg = LEVEL_PROFILES_CLIENT[state.learnerLevel] || LEVEL_PROFILES_CLIENT.intermediate;
-      showToast(`Level set: ${levelCfg.label}`);
-      if (state.currentMessages.length <= 1) {
-        loadScenario(state.scenario);
-      }
+  // Header Saved Chats Button
+  if (dom.openSavedChatsBtn) {
+    dom.openSavedChatsBtn.addEventListener("click", () => {
+      openSavedConversationsModal();
     });
   }
-
-  // 🔴 Live Voice Mode Overlay Events
-  if (dom.startLiveOrbBtn) {
-    dom.startLiveOrbBtn.addEventListener("click", openLiveVoiceOverlay);
+  if (dom.closeSavedConvBtn) {
+    dom.closeSavedConvBtn.addEventListener("click", () => {
+      closeSavedConversationsModal();
+    });
   }
-  if (dom.closeLiveOrbBtn) {
-    dom.closeLiveOrbBtn.addEventListener("click", closeLiveVoiceOverlay);
+  if (dom.backToSavedListBtn) {
+    dom.backToSavedListBtn.addEventListener("click", () => {
+      showSavedListView();
+    });
   }
-  if (dom.endLiveCallBtn) {
-    dom.endLiveCallBtn.addEventListener("click", closeLiveVoiceOverlay);
+  if (dom.resumeSavedChatBtn) {
+    dom.resumeSavedChatBtn.addEventListener("click", () => {
+      resumeSavedConversation();
+    });
   }
-  if (dom.toggleLiveStreamBtn) {
-    dom.toggleLiveStreamBtn.addEventListener("click", toggleLiveVoiceSession);
+  if (dom.deleteCurrentSavedChatBtn) {
+    dom.deleteCurrentSavedChatBtn.addEventListener("click", () => {
+      deleteCurrentSavedConversation();
+    });
   }
 
   dom.saveSessionBtn.addEventListener("click", saveCurrentConversation);

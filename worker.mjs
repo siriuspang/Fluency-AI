@@ -513,7 +513,7 @@ function buildCorrectedSentenceVariants(rawOriginal, primaryCorrected, isPerfect
 }
 
 
-function generateContextualReply(userMessage, modelId, scenarioTitle, partnerName, history, grammarResult) {
+function generateContextualReply(userMessage, modelId, scenarioTitle, partnerName, history, grammarResult, learnerLevel = "intermediate") {
   const rawClean = (userMessage || "").trim();
   const clean = grammarResult.corrected || rawClean;
   const lower = clean.toLowerCase();
@@ -746,6 +746,19 @@ function generateContextualReply(userMessage, modelId, scenarioTitle, partnerNam
   reply = dynamicReplies[charHash % dynamicReplies.length];
   followUpHint = "It was a really nice experience, and I'm happy I got to try something new today.";
 
+  if (learnerLevel === "beginner" && reply) {
+    // Beginner level: concise, simple everyday phrasing (1-2 sentences)
+    const sentences = reply.split(/(?<=[.?!])\s+/);
+    if (sentences.length > 2) {
+      reply = sentences.slice(0, 1).concat(sentences.slice(-1)).join(" ");
+    }
+  } else if (learnerLevel === "advanced" && reply) {
+    // Advanced level: richer phrasing
+    if (!reply.includes("In my view") && !reply.includes("fascinating") && !reply.includes("particularly")) {
+      reply = reply.replace(/^([A-Z][a-z]+[!.,])/, "$1 Truly fascinating—");
+    }
+  }
+
   return { reply, followUpHint, betterExpressions, pronunciationTips, keyVocabulary, recommendedSpeechRate };
 }
 
@@ -766,56 +779,8 @@ export default {
     }
 
     if (url.pathname === "/api/tts" && request.method === "POST") {
-      try {
-        const body = await request.json();
-        const text = (body.text || "").trim();
-        const voiceKey = body.voice || "gemini:Kore";
-        if (!text) {
-          return new Response(JSON.stringify({ error: "Empty text" }), {
-            status: 400,
-            headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
-          });
-        }
-
-        const VOICE_TL_MAP = {
-          "gemini:Kore": "en-US",
-          "gemini:Puck": "en-CA",
-          "gemini:Aoede": "en-GB",
-          "gemini:Charon": "en-GB",
-          "gemini:Fenrir": "en-AU",
-          "openai:coral": "en-US",
-          "openai:nova": "en-AU",
-          "openai:alloy": "en-CA",
-          "openai:sage": "en-GB",
-          "openai:ash": "en-IE",
-          "openai:shimmer": "en-IN"
-        };
-        const tl = VOICE_TL_MAP[voiceKey] || "en-US";
-
-        const cleanSnippet = text.slice(0, 220);
-        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(cleanSnippet)}`;
-        const ttsResp = await fetch(ttsUrl, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-          }
-        });
-
-        if (ttsResp.ok) {
-          const audioBuffer = await ttsResp.arrayBuffer();
-          return new Response(audioBuffer, {
-            status: 200,
-            headers: {
-              "Content-Type": "audio/mpeg",
-              "Access-Control-Allow-Origin": "*",
-              "Cache-Control": "public, max-age=86400"
-            }
-          });
-        }
-      } catch (err) {
-        // Fall back gracefully to browser
-      }
-      return new Response(JSON.stringify({ error: "TTS fallback to browser" }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: "Use client-side Web Speech Synthesis" }), {
+        status: 501,
         headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
       });
     }
@@ -832,7 +797,7 @@ export default {
         const learnerLevel = body.learnerLevel || "intermediate";
 
         const grammarResult = analyzeGrammarAndPhrasing(userMessage, modelMeta);
-        const convResult = generateContextualReply(userMessage, modelId, scenarioTitle, partnerName, history, grammarResult);
+        const convResult = generateContextualReply(userMessage, modelId, scenarioTitle, partnerName, history, grammarResult, learnerLevel);
 
         let finalReply = convResult.reply;
         let finalHint = convResult.followUpHint;
