@@ -675,13 +675,52 @@ function syncSettingsUI() {
   }
 }
 
-function showToast(message) {
+function isSentenceSavedInHistory(targetText) {
+  if (!targetText || !state.sentenceHistory) return false;
+  const norm = targetText.trim().toLowerCase();
+  return state.sentenceHistory.some(
+    (s) => (s.corrected && s.corrected.trim().toLowerCase() === norm) ||
+           (s.userSaid && s.userSaid.trim().toLowerCase() === norm)
+  );
+}
+
+function removeSentenceFromHistory(targetText) {
+  if (!targetText || !state.sentenceHistory) return;
+  const norm = targetText.trim().toLowerCase();
+  state.sentenceHistory = state.sentenceHistory.filter(
+    (s) => (s.corrected && s.corrected.trim().toLowerCase() !== norm) &&
+           (s.userSaid && s.userSaid.trim().toLowerCase() !== norm)
+  );
+  persistHistoryToStorage();
+  updateHistoryBadges();
+  if (dom.historyModal && !dom.historyModal.classList.contains("hidden")) {
+    renderHistoryModalContent();
+  }
+}
+
+function openHistoryModal(targetTab = "sentences") {
+  renderHistoryModalContent();
+  dom.historyModal.classList.remove("hidden");
+  document.querySelectorAll(".history-tab").forEach((b) => {
+    const isTarget = b.dataset.tab === targetTab;
+    b.classList.toggle("active", isTarget);
+  });
+  state.activeHistoryTab = targetTab;
+  dom.tabPanelSentences.classList.toggle("hidden", targetTab !== "sentences");
+  dom.tabPanelVocabulary.classList.toggle("hidden", targetTab !== "vocabulary");
+  dom.tabPanelSessions.classList.toggle("hidden", targetTab !== "sessions");
+}
+
+function showToast(message, actionCallback = null) {
   dom.toastNotification.textContent = message;
   dom.toastNotification.classList.remove("hidden");
+  dom.toastNotification.onclick = actionCallback || (() => {
+    openHistoryModal("sentences");
+  });
   clearTimeout(showToast._timer);
   showToast._timer = setTimeout(() => {
     dom.toastNotification.classList.add("hidden");
-  }, 2600);
+  }, 3400);
 }
 
 function copyTextToClipboard(text, onSuccess) {
@@ -795,28 +834,6 @@ function appendMessage(role, text, recordInSession = true) {
   });
   actions.appendChild(listenBtn);
 
-  if (role === "ai") {
-    const slowBtn = document.createElement("button");
-    slowBtn.className = "btn-bubble-action";
-    slowBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Slow</span>`;
-    slowBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      speakText(text, 0.8);
-    });
-    actions.appendChild(slowBtn);
-
-    const shadowBtn = document.createElement("button");
-    shadowBtn.className = "btn-bubble-action";
-    shadowBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg><span>Shadow</span>`;
-    shadowBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      dom.userInput.value = text;
-      speakText(text, 0.9);
-      dom.userInput.focus();
-    });
-    actions.appendChild(shadowBtn);
-  }
-
   const copyBtn = document.createElement("button");
   copyBtn.className = "btn-bubble-action";
   copyBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><span>Copy</span>`;
@@ -834,20 +851,36 @@ function appendMessage(role, text, recordInSession = true) {
 
   const saveSentenceBtn = document.createElement("button");
   saveSentenceBtn.className = "btn-bubble-action";
-  saveSentenceBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
+  const refreshSaveBtnUI = () => {
+    const isSaved = isSentenceSavedInHistory(text);
+    if (isSaved) {
+      saveSentenceBtn.classList.add("saved");
+      saveSentenceBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#10b981" stroke="#10b981" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Saved</span>`;
+    } else {
+      saveSentenceBtn.classList.remove("saved");
+      saveSentenceBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
+    }
+  };
+  refreshSaveBtnUI();
+
   saveSentenceBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    saveSentenceToHistory({
-      userSaid: role === "user" ? text : "(Saved AI Expression)",
-      corrected: text,
-      explanation:
-        role === "user"
-          ? "Bookmarked speaking turn."
-          : "Bookmarked native response.",
-      betterExpression: text,
-      starred: true
-    });
-    showToast("Saved to Review Notebook!");
+    const currentlySaved = isSentenceSavedInHistory(text);
+    if (currentlySaved) {
+      removeSentenceFromHistory(text);
+      refreshSaveBtnUI();
+      showToast("Removed from Review Notebook");
+    } else {
+      saveSentenceToHistory({
+        userSaid: role === "user" ? text : "(Saved AI Expression)",
+        corrected: text,
+        explanation: role === "user" ? "Bookmarked speaking turn." : "Bookmarked native response.",
+        betterExpression: text,
+        starred: true
+      });
+      refreshSaveBtnUI();
+      showToast("Saved to Review Notebook! (Click to view)");
+    }
   });
   actions.appendChild(saveSentenceBtn);
 
@@ -1042,17 +1075,36 @@ function renderCoachingFeedback(coaching) {
 
   const btnSavePrimary = document.createElement("button");
   btnSavePrimary.className = "btn-bubble-action";
-  btnSavePrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
+  const refreshSavePrimaryUI = () => {
+    const isSaved = isSentenceSavedInHistory(primarySentence);
+    if (isSaved) {
+      btnSavePrimary.classList.add("saved");
+      btnSavePrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#10b981" stroke="#10b981" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Saved</span>`;
+    } else {
+      btnSavePrimary.classList.remove("saved");
+      btnSavePrimary.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
+    }
+  };
+  refreshSavePrimaryUI();
+
   btnSavePrimary.addEventListener("click", (e) => {
     e.stopPropagation();
-    saveSentenceToHistory({
-      userSaid: rawUserUtterance || "(Practice Sentence)",
-      corrected: primarySentence,
-      explanation: `Grammar Fix`,
-      betterExpression: primarySentence,
-      starred: true
-    });
-    showToast(`Saved "Grammar Fix" to Review Notebook!`);
+    const currentlySaved = isSentenceSavedInHistory(primarySentence);
+    if (currentlySaved) {
+      removeSentenceFromHistory(primarySentence);
+      refreshSavePrimaryUI();
+      showToast(`Removed "Grammar Fix" from Review Notebook`);
+    } else {
+      saveSentenceToHistory({
+        userSaid: rawUserUtterance || "(Practice Sentence)",
+        corrected: primarySentence,
+        explanation: `Grammar Fix`,
+        betterExpression: primarySentence,
+        starred: true
+      });
+      refreshSavePrimaryUI();
+      showToast(`Saved "Grammar Fix" to Review Notebook! (Click to view)`);
+    }
   });
 
   primaryBtnGroup.appendChild(btnListenPrimary);
@@ -1133,17 +1185,36 @@ function renderCoachingFeedback(coaching) {
 
       const btnSaveAlt = document.createElement("button");
       btnSaveAlt.className = "btn-bubble-action";
-      btnSaveAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
+      const refreshSaveAltUI = () => {
+        const isSaved = isSentenceSavedInHistory(ex.phrase);
+        if (isSaved) {
+          btnSaveAlt.classList.add("saved");
+          btnSaveAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="#10b981" stroke="#10b981" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Saved</span>`;
+        } else {
+          btnSaveAlt.classList.remove("saved");
+          btnSaveAlt.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m19 21-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg><span>Save</span>`;
+        }
+      };
+      refreshSaveAltUI();
+
       btnSaveAlt.addEventListener("click", (e) => {
         e.stopPropagation();
-        saveSentenceToHistory({
-          userSaid: rawUserUtterance || "(Practice Sentence)",
-          corrected: ex.phrase,
-          explanation: `Alternative ${idx + 1} — ${coaching.grammarExplanation || ""}`,
-          betterExpression: ex.phrase,
-          starred: true
-        });
-        showToast(`Saved "Alternative ${idx + 1}" to Review Notebook!`);
+        const currentlySaved = isSentenceSavedInHistory(ex.phrase);
+        if (currentlySaved) {
+          removeSentenceFromHistory(ex.phrase);
+          refreshSaveAltUI();
+          showToast(`Removed "Alternative ${idx + 1}" from Review Notebook`);
+        } else {
+          saveSentenceToHistory({
+            userSaid: rawUserUtterance || "(Practice Sentence)",
+            corrected: ex.phrase,
+            explanation: `Alternative ${idx + 1} — ${coaching.grammarExplanation || ""}`,
+            betterExpression: ex.phrase,
+            starred: true
+          });
+          refreshSaveAltUI();
+          showToast(`Saved "Alternative ${idx + 1}" to Review Notebook! (Click to view)`);
+        }
       });
 
       altBtns.appendChild(btnListenAlt);
@@ -2843,35 +2914,135 @@ async function speakText(text, customRate = null) {
     }
   }
 
-  // 4. Multi-Persona Browser SpeechSynthesis Fallback (distinct voice/pitch/accent per persona)
+  // 4. Multi-Persona Browser SpeechSynthesis Fallback (Natural, High-Res Neural Spoken Voices)
   if ("speechSynthesis" in window) {
     const utterance = new SpeechSynthesisUtterance(text);
-    const personaFallbackProfiles = {
-      "gemini:Kore": { lang: "en-US", pitch: 1.08, rateMult: 1.0, genderHint: /zira|aria|jenny|samantha|google us/i },
-      "gemini:Puck": { lang: "en-US", pitch: 0.92, rateMult: 1.06, genderHint: /david|mark|guy|andrew|alex/i },
-      "gemini:Aoede": { lang: "en-GB", pitch: 1.12, rateMult: 0.98, genderHint: /hazel|sonia|libby|uk english female|serena/i },
-      "gemini:Charon": { lang: "en-GB", pitch: 0.82, rateMult: 0.95, genderHint: /george|ryan|uk english male|daniel/i },
-      "gemini:Fenrir": { lang: "en-US", pitch: 0.78, rateMult: 1.04, genderHint: /david|guy|mark|james/i },
-      "openai:coral": { lang: "en-US", pitch: 1.15, rateMult: 1.03, genderHint: /jenny|aria|zira|samantha/i },
-      "openai:nova": { lang: "en-AU", pitch: 1.1, rateMult: 1.04, genderHint: /natasha|catherine|karen|zira/i },
-      "openai:alloy": { lang: "en-US", pitch: 1.0, rateMult: 1.0, genderHint: /aria|google us|zira/i },
-      "openai:sage": { lang: "en-GB", pitch: 0.86, rateMult: 0.96, genderHint: /george|thomas|ryan|uk english male/i },
-      "openai:ash": { lang: "en-US", pitch: 0.9, rateMult: 1.02, genderHint: /mark|david|brian|guy/i },
-      "openai:shimmer": { lang: "en-US", pitch: 1.2, rateMult: 0.97, genderHint: /emma|zira|samantha/i }
+
+    // Distinct persona voice tuning profile with varied accents, pitch inflection, and specific Natural names
+    const personaProfiles = {
+      // Gemini Personas
+      "gemini:Kore": {
+        lang: "en-US",
+        pitch: 1.05,
+        rateMult: 1.0,
+        favoredNames: ["jenny (natural)", "jenny", "ava (natural)", "ava", "google us english", "samantha"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "gemini:Puck": {
+        lang: "en-US",
+        pitch: 1.12,
+        rateMult: 1.06,
+        favoredNames: ["andrew (natural)", "andrew", "guy (natural)", "guy", "google us english", "alex"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "gemini:Aoede": {
+        lang: "en-GB",
+        pitch: 1.06,
+        rateMult: 0.98,
+        favoredNames: ["sonia (natural)", "sonia", "libby (natural)", "libby", "google uk english female", "serena"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "gemini:Charon": {
+        lang: "en-GB",
+        pitch: 0.86,
+        rateMult: 0.94,
+        favoredNames: ["ryan (natural)", "ryan", "oliver (natural)", "google uk english male", "daniel"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "gemini:Fenrir": {
+        lang: "en-AU",
+        pitch: 0.82,
+        rateMult: 1.02,
+        favoredNames: ["william (natural)", "william", "brian (natural)", "guy (natural)", "google us english"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      // ChatGPT Personas
+      "openai:coral": {
+        lang: "en-US",
+        pitch: 1.18,
+        rateMult: 1.03,
+        favoredNames: ["jenny (natural)", "jenny", "aria (natural)", "samantha", "google us english"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "openai:nova": {
+        lang: "en-AU",
+        pitch: 1.08,
+        rateMult: 1.04,
+        favoredNames: ["natasha (natural)", "natasha", "annette (natural)", "karen", "google en-au"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "openai:alloy": {
+        lang: "en-US",
+        pitch: 1.0,
+        rateMult: 1.0,
+        favoredNames: ["aria (natural)", "aria", "ava (natural)", "google us english"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "openai:sage": {
+        lang: "en-GB",
+        pitch: 0.92,
+        rateMult: 0.96,
+        favoredNames: ["thomas (natural)", "thomas", "george (natural)", "george", "google uk english male"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "openai:ash": {
+        lang: "en-US",
+        pitch: 0.92,
+        rateMult: 1.02,
+        favoredNames: ["brian (natural)", "brian", "guy (natural)", "guy", "alex"],
+        excludeRegex: /desktop|zira|david/i
+      },
+      "openai:shimmer": {
+        lang: "en-US",
+        pitch: 1.14,
+        rateMult: 0.98,
+        favoredNames: ["neerja (natural)", "neerja", "emma (natural)", "emma", "samantha"],
+        excludeRegex: /desktop|zira|david/i
+      }
     };
-    const profile = personaFallbackProfiles[state.voicePersona] || personaFallbackProfiles["gemini:Kore"];
+
+    const profile = personaProfiles[state.voicePersona] || personaProfiles["gemini:Kore"];
     utterance.lang = profile.lang;
     utterance.pitch = profile.pitch;
     utterance.rate = Math.min(1.5, Math.max(0.7, rate * profile.rateMult));
 
-    const voices = window.speechSynthesis.getVoices();
-    const matchedVoice =
-      voices.find((v) => v.lang === profile.lang && profile.genderHint.test(v.name)) ||
-      voices.find((v) => profile.genderHint.test(v.name)) ||
-      voices.find((v) => v.lang === profile.lang);
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
+    const allVoices = window.speechSynthesis.getVoices();
+    let bestVoice = null;
+
+    // Phase 1: Search for specific favored Natural/Online voice name
+    for (const nameKeyword of profile.favoredNames) {
+      bestVoice = allVoices.find(
+        (v) => v.name.toLowerCase().includes(nameKeyword) && !profile.excludeRegex.test(v.name)
+      );
+      if (bestVoice) break;
     }
+
+    // Phase 2: Search for any Natural / Online / Neural / Google voice in target lang
+    if (!bestVoice) {
+      bestVoice = allVoices.find(
+        (v) => (v.lang === profile.lang || v.lang.replace('_', '-').startsWith(profile.lang.split('-')[0])) &&
+               /natural|online|neural|google|enhanced|premium/i.test(v.name) &&
+               !profile.excludeRegex.test(v.name)
+      );
+    }
+
+    // Phase 3: Any English voice that is not a legacy robotic desktop voice
+    if (!bestVoice) {
+      bestVoice = allVoices.find(
+        (v) => (v.lang === profile.lang || v.lang.startsWith("en")) &&
+               !profile.excludeRegex.test(v.name)
+      );
+    }
+
+    // Fallback: Default language match
+    if (!bestVoice) {
+      bestVoice = allVoices.find((v) => v.lang === profile.lang) || allVoices.find((v) => v.lang.startsWith("en"));
+    }
+
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 }
@@ -3638,8 +3809,7 @@ function bindEvents() {
 
   // ==================== HISTORY & REVIEW NOTEBOOK EVENTS ====================
   dom.openHistoryBtn.addEventListener("click", () => {
-    renderHistoryModalContent();
-    dom.historyModal.classList.remove("hidden");
+    openHistoryModal("sentences");
   });
 
   const closeHistory = () => dom.historyModal.classList.add("hidden");

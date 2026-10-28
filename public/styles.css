@@ -733,30 +733,49 @@ button, input, select, textarea {
   word-break: break-word;
 }
 
-/* AI Message Bubble: Minimal Slate Surface Card */
+/* AI Message Bubble: Calm, elegant slate surface with soft silver typography */
 .message-row.ai .bubble {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: #111624;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-top-left-radius: var(--radius-xs);
-  color: #f1f5f9;
+  color: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* User Message Bubble: Rich Dark Indigo Surface */
+/* User Message Bubble: Refined deep indigo tone with crisp white text */
 .message-row.user .bubble {
-  background: #1e2238;
-  border: 1px solid rgba(99, 102, 241, 0.32);
+  background: linear-gradient(135deg, #1f2744 0%, #171d34 100%);
+  border: 1px solid rgba(99, 102, 241, 0.38);
   border-top-right-radius: var(--radius-xs);
   color: #ffffff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
 }
 
 .message-row .bubble {
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.message-row .bubble:hover {
-  border-color: rgba(99, 102, 241, 0.45);
+.message-row.ai .bubble:hover {
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.message-row.user .bubble:hover {
+  border-color: rgba(99, 102, 241, 0.55);
+}
+
+/* Save Button Active / Saved State (Green Highlight Toggle) */
+.btn-bubble-action.saved,
+.btn-card-action.saved {
+  color: #10b981 !important;
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+}
+
+.btn-bubble-action.saved svg,
+.btn-card-action.saved svg {
+  stroke: #10b981 !important;
+  fill: rgba(16, 185, 129, 0.3) !important;
 }
 
 /* 문장 호버 시 나타나는 플로팅 툴바 (커서 이동 시 사라지지 않도록 무간극 브릿지 및 유예 시간 적용) */
@@ -2095,17 +2114,30 @@ button, input, select, textarea {
 /* Toast */
 .toast {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: 24px;
+  right: 24px;
   background: #10b981;
   color: #042f2e;
   font-weight: 700;
-  font-size: 0.80rem;
-  padding: 8px 16px;
+  font-size: 0.82rem;
+  padding: 10px 18px;
   border-radius: var(--radius-full);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45);
   z-index: 200;
   animation: messageFadeIn 0.2s ease-out;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toast:hover {
+  transform: translateY(-2px);
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.55);
 }
 
 .hidden {
@@ -2572,7 +2604,8 @@ button, input, select, textarea {
 
   .text-input-wrapper textarea::placeholder {
     font-size: 13px;
-    color: var(--text-tertiary);
+    color: rgba(148, 163, 184, 0.38) !important;
+    opacity: 0.55;
   }
 
   .mic-btn {
