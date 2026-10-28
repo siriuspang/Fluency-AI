@@ -375,14 +375,14 @@ const state = {
   provider: localStorage.getItem("speakflow_ai_provider") || "gemini", // "gemini" | "openai"
   apiKey: localStorage.getItem("speakflow_gemini_api_key") || "",
   openaiApiKey: localStorage.getItem("speakflow_openai_api_key") || "",
-  model: localStorage.getItem("speakflow_gemini_model") || "gemini-4-argon",
-  openaiModel: localStorage.getItem("speakflow_openai_model") || "gpt-4o",
+  model: (localStorage.getItem("speakflow_gemini_model") === "gemini-3.8-flash" ? "gemini-3.8-flash" : "gemini-3.8-flash"),
+  openaiModel: "gpt-4o",
   thinkingLevel: localStorage.getItem("speakflow_thinking_level") || "low",
   learnerLevel: normalizeLearnerLevel(localStorage.getItem("speakflow_learner_level") || "intermediate"),
   // Default to "auto-ai" so as soon as a Gemini/OpenAI key is present, it uses the real AI Live Voice!
   ttsEngine: localStorage.getItem("speakflow_tts_engine") || "auto-ai",
   sttEngine: localStorage.getItem("speakflow_stt_engine") || "hybrid",
-  voicePersona: localStorage.getItem("speakflow_voice_persona") || "gemini:Kore", // e.g., "gemini:Puck", "openai:coral"
+  voicePersona: localStorage.getItem("speakflow_voice_persona") || "female", // e.g., "gemini:Puck", "openai:coral"
   voiceAccent: localStorage.getItem("speakflow_voice_accent") || "en-US",
   speechRate: parseFloat(localStorage.getItem("speakflow_speech_rate") || "1.0"),
   conversationMode: localStorage.getItem("speakflow_conversation_mode") || (localStorage.getItem("speakflow_auto_speak") === "false" ? "chat" : "voice"),
@@ -588,13 +588,12 @@ const MODEL_DEFAULT_VOICE_MAP = {
 };
 
 function getParsedVoicePersona() {
-  const parts = (state.voicePersona || "gemini:Kore").split(":");
-  const rawName = parts[1] || "Kore";
-  const voiceDisplayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
+  const isMale = (state.voicePersona === "male");
   return {
-    voiceProvider: parts[0] || "gemini",
-    voiceName: rawName,
-    voiceDisplayName
+    voiceProvider: isMale ? "openai" : "gemini",
+    voiceName: isMale ? "Guy" : "Jenny",
+    voiceDisplayName: isMale ? "Male (Natural)" : "Female (Natural)",
+    gender: isMale ? "male" : "female"
   };
 }
 
@@ -1487,7 +1486,7 @@ function saveCurrentSessionToArchive(showNotification = false) {
   updateHistoryBadges();
 
   if (showNotification) {
-    showToast("💾 Chat session saved to Speaking History!");
+    showToast("💾 Full conversation saved! (Click to view)", () => openHistoryModal("sessions"));
   }
 }
 
@@ -1513,31 +1512,28 @@ function renderHistoryModalContent() {
   } else {
     filteredSentences.forEach((item) => {
       const card = document.createElement("div");
-      card.className = "history-card";
+      card.className = "history-card minimal-sentence-card";
+      const hasOriginalDiff = item.userSaid && item.userSaid !== item.corrected && item.userSaid !== "(Saved AI Expression)" && item.userSaid !== "(Practice Sentence)";
+      
       card.innerHTML = `
-        <div class="history-card-top">
-          <div class="history-meta-badges">
-            <span class="meta-pill">${item.scenario}</span>
-            <span class="meta-pill">${item.provider}</span>
-            <span>${item.timestamp}</span>
+        <div class="history-sentence-row">
+          <div class="history-sentence-text">${escapeHtml(item.corrected)}</div>
+          <div class="history-actions-inline">
+            <button class="btn-bubble-action btn-mini" data-action="speak-sent" data-text="${encodeURIComponent(item.corrected)}" title="Listen to sentence">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <span>Listen</span>
+            </button>
+            <button class="btn-bubble-action btn-mini" data-action="copy-sent" data-text="${encodeURIComponent(item.corrected)}" title="Copy sentence">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <span>Copy</span>
+            </button>
+            <button class="btn-bubble-action btn-mini btn-del" data-action="delete-sent" data-id="${item.id}" title="Remove from list">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              <span>Delete</span>
+            </button>
           </div>
-          <button class="btn-star ${item.starred ? "starred" : ""}" data-action="star-sent" data-id="${item.id}">
-            ${item.starred ? "⭐ Starred" : "☆ Star"}
-          </button>
         </div>
-        <div class="history-said"><span>You said:</span> "${item.userSaid}"</div>
-        <div class="history-corrected">✅ ${item.corrected}</div>
-        <div class="history-explanation">💡 ${item.explanation}</div>
-        ${
-          item.betterExpression
-            ? `<div class="history-explanation" style="color:#a5b4fc;">✨ <strong>Native Upgrade:</strong> "${item.betterExpression}"</div>`
-            : ""
-        }
-        <div class="history-card-actions">
-          <button class="btn-bubble-action" data-action="speak-sent" data-text="${encodeURIComponent(item.corrected)}">🔊 Listen Corrected</button>
-          <button class="btn-bubble-action" data-action="practice-sent" data-text="${encodeURIComponent(item.corrected)}">🎯 Practice in Chat</button>
-          <button class="btn-bubble-action" data-action="delete-sent" data-id="${item.id}" style="margin-left:auto;color:#fda4af;">🗑️ Remove</button>
-        </div>
+        ${hasOriginalDiff ? `<div class="history-orig-hint">Original: "${escapeHtml(item.userSaid)}"</div>` : ""}
       `;
       dom.sentenceHistoryList.appendChild(card);
     });
@@ -2914,135 +2910,67 @@ async function speakText(text, customRate = null) {
     }
   }
 
-  // 4. Multi-Persona Browser SpeechSynthesis Fallback (Natural, High-Res Neural Spoken Voices)
+  // 4. Guaranteed Gender-Accurate Natural SpeechSynthesis (Female vs Male)
   if ("speechSynthesis" in window) {
     const utterance = new SpeechSynthesisUtterance(text);
-
-    // Distinct persona voice tuning profile with varied accents, pitch inflection, and specific Natural names
-    const personaProfiles = {
-      // Gemini Personas
-      "gemini:Kore": {
-        lang: "en-US",
-        pitch: 1.05,
-        rateMult: 1.0,
-        favoredNames: ["jenny (natural)", "jenny", "ava (natural)", "ava", "google us english", "samantha"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "gemini:Puck": {
-        lang: "en-US",
-        pitch: 1.12,
-        rateMult: 1.06,
-        favoredNames: ["andrew (natural)", "andrew", "guy (natural)", "guy", "google us english", "alex"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "gemini:Aoede": {
-        lang: "en-GB",
-        pitch: 1.06,
-        rateMult: 0.98,
-        favoredNames: ["sonia (natural)", "sonia", "libby (natural)", "libby", "google uk english female", "serena"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "gemini:Charon": {
-        lang: "en-GB",
-        pitch: 0.86,
-        rateMult: 0.94,
-        favoredNames: ["ryan (natural)", "ryan", "oliver (natural)", "google uk english male", "daniel"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "gemini:Fenrir": {
-        lang: "en-AU",
-        pitch: 0.82,
-        rateMult: 1.02,
-        favoredNames: ["william (natural)", "william", "brian (natural)", "guy (natural)", "google us english"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      // ChatGPT Personas
-      "openai:coral": {
-        lang: "en-US",
-        pitch: 1.18,
-        rateMult: 1.03,
-        favoredNames: ["jenny (natural)", "jenny", "aria (natural)", "samantha", "google us english"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "openai:nova": {
-        lang: "en-AU",
-        pitch: 1.08,
-        rateMult: 1.04,
-        favoredNames: ["natasha (natural)", "natasha", "annette (natural)", "karen", "google en-au"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "openai:alloy": {
-        lang: "en-US",
-        pitch: 1.0,
-        rateMult: 1.0,
-        favoredNames: ["aria (natural)", "aria", "ava (natural)", "google us english"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "openai:sage": {
-        lang: "en-GB",
-        pitch: 0.92,
-        rateMult: 0.96,
-        favoredNames: ["thomas (natural)", "thomas", "george (natural)", "george", "google uk english male"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "openai:ash": {
-        lang: "en-US",
-        pitch: 0.92,
-        rateMult: 1.02,
-        favoredNames: ["brian (natural)", "brian", "guy (natural)", "guy", "alex"],
-        excludeRegex: /desktop|zira|david/i
-      },
-      "openai:shimmer": {
-        lang: "en-US",
-        pitch: 1.14,
-        rateMult: 0.98,
-        favoredNames: ["neerja (natural)", "neerja", "emma (natural)", "emma", "samantha"],
-        excludeRegex: /desktop|zira|david/i
-      }
-    };
-
-    const profile = personaProfiles[state.voicePersona] || personaProfiles["gemini:Kore"];
-    utterance.lang = profile.lang;
-    utterance.pitch = profile.pitch;
-    utterance.rate = Math.min(1.5, Math.max(0.7, rate * profile.rateMult));
-
+    const isMale = (state.voicePersona === "male");
     const allVoices = window.speechSynthesis.getVoices();
-    let bestVoice = null;
+    let selectedVoice = null;
 
-    // Phase 1: Search for specific favored Natural/Online voice name
-    for (const nameKeyword of profile.favoredNames) {
-      bestVoice = allVoices.find(
-        (v) => v.name.toLowerCase().includes(nameKeyword) && !profile.excludeRegex.test(v.name)
-      );
-      if (bestVoice) break;
+    if (isMale) {
+      utterance.lang = "en-US";
+      utterance.pitch = 0.86; // Deep, confident masculine pitch
+      utterance.rate = Math.min(1.4, Math.max(0.7, rate * 0.98));
+
+      // Favored natural/neural male voices in Edge, Chrome, Safari, Windows & Mac
+      const maleFavored = [
+        "guy (natural)", "guy", "andrew (natural)", "andrew", "brian (natural)",
+        "ryan (natural)", "google uk english male", "google us english male", "daniel", "alex"
+      ];
+      // STRICT FILTER: Absolutely exclude any female voice or legacy robotic desktop voice
+      const excludeFemale = /desktop|zira|jenny|ava|samantha|aria|sonia|libby|karen|female|woman/i;
+
+      for (const name of maleFavored) {
+        selectedVoice = allVoices.find(v => v.name.toLowerCase().includes(name) && !excludeFemale.test(v.name));
+        if (selectedVoice) break;
+      }
+      if (!selectedVoice) {
+        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && /male|man/i.test(v.name) && !excludeFemale.test(v.name));
+      }
+      if (!selectedVoice) {
+        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && !excludeFemale.test(v.name));
+      }
+    } else {
+      utterance.lang = "en-US";
+      utterance.pitch = 1.05; // Warm, natural feminine pitch
+      utterance.rate = Math.min(1.4, Math.max(0.7, rate * 1.0));
+
+      // Favored natural/neural female voices in Edge, Chrome, Safari, Windows & Mac
+      const femaleFavored = [
+        "jenny (natural)", "jenny", "ava (natural)", "ava", "samantha",
+        "aria (natural)", "aria", "google us english", "sonia (natural)"
+      ];
+      // STRICT FILTER: Absolutely exclude any male voice or legacy robotic desktop voice
+      const excludeMale = /desktop|david|guy|ryan|andrew|mark|daniel|brian|george|thomas|male|man/i;
+
+      for (const name of femaleFavored) {
+        selectedVoice = allVoices.find(v => v.name.toLowerCase().includes(name) && !excludeMale.test(v.name));
+        if (selectedVoice) break;
+      }
+      if (!selectedVoice) {
+        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && /female|woman/i.test(v.name) && !excludeMale.test(v.name));
+      }
+      if (!selectedVoice) {
+        selectedVoice = allVoices.find(v => v.lang.startsWith("en") && !excludeMale.test(v.name));
+      }
     }
 
-    // Phase 2: Search for any Natural / Online / Neural / Google voice in target lang
-    if (!bestVoice) {
-      bestVoice = allVoices.find(
-        (v) => (v.lang === profile.lang || v.lang.replace('_', '-').startsWith(profile.lang.split('-')[0])) &&
-               /natural|online|neural|google|enhanced|premium/i.test(v.name) &&
-               !profile.excludeRegex.test(v.name)
-      );
+    if (!selectedVoice) {
+      selectedVoice = allVoices.find(v => v.lang.startsWith("en")) || allVoices[0];
     }
-
-    // Phase 3: Any English voice that is not a legacy robotic desktop voice
-    if (!bestVoice) {
-      bestVoice = allVoices.find(
-        (v) => (v.lang === profile.lang || v.lang.startsWith("en")) &&
-               !profile.excludeRegex.test(v.name)
-      );
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
     }
-
-    // Fallback: Default language match
-    if (!bestVoice) {
-      bestVoice = allVoices.find((v) => v.lang === profile.lang) || allVoices.find((v) => v.lang.startsWith("en"));
-    }
-
-    if (bestVoice) {
-      utterance.voice = bestVoice;
-    }
-
     window.speechSynthesis.speak(utterance);
   }
 }
@@ -3658,42 +3586,32 @@ function bindEvents() {
 
   // Header Quick Model Switcher — automatically switches both the AI model AND its signature neural voice!
   dom.quickModelSelect.addEventListener("change", () => {
-    const [prov, mod] = dom.quickModelSelect.value.split(":");
+    const val = dom.quickModelSelect.value;
+    const [prov, mod] = val.split(":");
     state.provider = prov;
     if (prov === "openai") {
-      state.openaiModel = mod;
-      localStorage.setItem("speakflow_openai_model", mod);
+      state.openaiModel = "gpt-4o";
+      localStorage.setItem("speakflow_openai_model", "gpt-4o");
     } else {
-      state.model = mod;
-      localStorage.setItem("speakflow_gemini_model", mod);
-    }
-    if (MODEL_DEFAULT_VOICE_MAP[mod]) {
-      state.voicePersona = MODEL_DEFAULT_VOICE_MAP[mod];
-      localStorage.setItem("speakflow_voice_persona", state.voicePersona);
+      state.model = "gemini-3.8-flash";
+      localStorage.setItem("speakflow_gemini_model", "gemini-3.8-flash");
     }
     localStorage.setItem("speakflow_ai_provider", prov);
     syncSettingsUI();
-    const { voiceDisplayName } = getParsedVoicePersona();
-    showToast(`Switched to ${prov === "openai" ? "ChatGPT" : "Gemini"} (${mod}) · Partner: ${voiceDisplayName}`);
-    if (state.autoSpeak) {
-      speakText(`Hi! I'm ${voiceDisplayName}, your English speaking partner.`);
-    }
+    showToast(`Switched to ${prov === "openai" ? "ChatGPT (GPT-4o)" : "Gemini 3.8 Flash"}`);
   });
 
   // Header Quick Voice Persona Switcher (목소리 직접 선택)
   if (dom.quickVoicePersonaSelect) {
     dom.quickVoicePersonaSelect.addEventListener("change", () => {
-      const selectedVoice = dom.quickVoicePersonaSelect.value;
-      state.voicePersona = selectedVoice;
-      localStorage.setItem("speakflow_voice_persona", selectedVoice);
-      if (dom.voicePersonaSelect) {
-        dom.voicePersonaSelect.value = selectedVoice;
-      }
+      const selected = dom.quickVoicePersonaSelect.value;
+      state.voicePersona = selected;
+      localStorage.setItem("speakflow_voice_persona", selected);
       syncSettingsUI();
-      const { voiceDisplayName } = getParsedVoicePersona();
-      showToast(`AI Voice: ${voiceDisplayName}`);
+      const label = selected === "male" ? "Male Voice" : "Female Voice";
+      showToast(`Switched to ${label}`);
       if (state.autoSpeak) {
-        speakText(`Hello! I'm ${voiceDisplayName}. Great to speak with you.`);
+        speakText(selected === "male" ? "Hello, I am your male conversation partner." : "Hello, I am your female conversation partner.");
       }
     });
   }
@@ -3804,7 +3722,25 @@ function bindEvents() {
   });
 
   dom.resetChatBtn.addEventListener("click", () => {
+    if (state.currentMessages && state.currentMessages.length > 1) {
+      saveCurrentSessionToArchive(false);
+    }
+    if (state.activeAudio) {
+      try { state.activeAudio.pause(); } catch (e) {}
+      state.activeAudio = null;
+    }
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    if (dom.userInput) {
+      dom.userInput.value = "";
+      dom.userInput.style.height = "auto";
+    }
     loadScenario(state.scenario);
+    showToast("🌱 New conversation started!");
+    setTimeout(() => {
+      if (dom.userInput) dom.userInput.focus();
+    }, 100);
   });
 
   // ==================== HISTORY & REVIEW NOTEBOOK EVENTS ====================

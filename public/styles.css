@@ -1924,6 +1924,66 @@ button, input, select, textarea {
   gap: 7px;
 }
 
+/* Minimalist Saved Sentence Card */
+.history-card.minimal-sentence-card {
+  padding: 14px 16px;
+  background: #111624;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  gap: 8px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.history-card.minimal-sentence-card:hover {
+  border-color: rgba(99, 102, 241, 0.35);
+  background: #141b2c;
+}
+
+.history-sentence-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-sentence-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f8fafc;
+  line-height: 1.45;
+  word-break: break-word;
+  flex: 1;
+}
+
+.history-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.history-actions-inline .btn-mini {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  gap: 4px;
+}
+
+.history-actions-inline .btn-del {
+  color: #f87171 !important;
+}
+
+.history-actions-inline .btn-del:hover {
+  background: rgba(244, 63, 94, 0.15) !important;
+  border-color: rgba(244, 63, 94, 0.4) !important;
+}
+
+.history-orig-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  padding-left: 2px;
+  font-style: italic;
+}
+
 .history-card-top {
   display: flex;
   align-items: center;
